@@ -1,63 +1,55 @@
 package cmd
 
 import (
-	"context"
 	"database/sql"
 	"log"
 	"net/http"
 	"strconv"
-	"time"
 
-	"github.com/etherlabsio/healthcheck/v2"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/gorilla/handlers"
+	gorillaHandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"go.uber.org/zap"
 
+	gabi "github.com/app-sre/gabi/pkg"
 	"github.com/app-sre/gabi/pkg/env/db"
-	"github.com/app-sre/gabi/pkg/query"
+	"github.com/app-sre/gabi/pkg/handlers"
 )
 
-func Run() {
+func Run(logger *zap.SugaredLogger) {
 	dbe := db.Dbenv{}
 	err := dbe.Populate()
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
-	zap.S().Info("Database environment variables populated.")
 
-	DB, err := sql.Open(dbe.DB_DRIVER, dbe.ConnStr)
+	logger.Info("Database environment variables populated.")
+
+	db, err := sql.Open(dbe.DB_DRIVER, dbe.ConnStr)
 	if err != nil {
-		log.Fatal("Fatal error opening database.")
+		logger.Fatal("Fatal error opening database.")
 	}
-	defer DB.Close()
-	zap.S().Info("Database connection handle established.")
-	zap.S().Infof("Using %s database driver.", dbe.DB_DRIVER)
+	defer db.Close()
+
+	env := &gabi.Env{DB: db, Logger: logger}
+	logger.Info("Database connection handle established.")
+	logger.Infof("Using %s database driver.", dbe.DB_DRIVER)
 
 	r := mux.NewRouter()
 
-	r.Handle("/healthcheck", healthcheck.Handler(
-		healthcheck.WithTimeout(5*time.Second),
-		healthcheck.WithChecker(
-			"database", healthcheck.CheckerFunc(
-				func(ctx context.Context) error {
-					return DB.PingContext(ctx)
-				},
-			),
-		),
-	))
+	r.Handle("/healthcheck", handlers.Healthcheck(env))
+	r.HandleFunc("/query", handlers.Query(env))
 
-	r.HandleFunc("/query", query.Handler)
-	zap.S().Info("Router initialized.")
+	logger.Info("Router initialized.")
 
 	servePort := 8080
-	zap.S().Infof("HTTP server starting on port %d.", servePort)
+	logger.Infof("HTTP server starting on port %d.", servePort)
 
 	// Temp workaround for easy to access io.Writer
 	httpLogger := log.Default()
 	http.ListenAndServe(
 		":"+strconv.Itoa(servePort),
-		handlers.LoggingHandler(httpLogger.Writer(), r),
+		gorillaHandlers.LoggingHandler(httpLogger.Writer(), r),
 	)
 }
