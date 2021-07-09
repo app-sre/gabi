@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	gabi "github.com/app-sre/gabi/pkg"
-	"go.uber.org/zap"
 )
 
 func Query(env *gabi.Env) http.HandlerFunc {
@@ -15,7 +14,7 @@ func Query(env *gabi.Env) http.HandlerFunc {
 		fmt.Fprintf(w, "%s %s %s \n", r.Method, r.URL, r.Proto)
 		for k, v := range r.Header {
 			fmt.Fprintf(w, "Header field %q, Value %q\n", k, v)
-			zap.S().Infof("Header field %q, Value %q", k, v)
+			env.Logger.Infof("Header field %q, Value %q", k, v)
 		}
 		fmt.Fprintf(w, "Host = %q\n", r.Host)
 		fmt.Fprintf(w, "RemoteAddr= %q\n", r.RemoteAddr)
