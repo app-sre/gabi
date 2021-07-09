@@ -1,5 +1,8 @@
 .env*
+
+# VSCODE
 .vscode
+__debug_*
 
 # Binaries for programs and plugins
 *.exe

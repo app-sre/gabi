@@ -58,8 +58,13 @@ $ go run cmd/main.go
 
 ## Environment Variables
 
+### DB_DRIVER Options
+
+* mysql
+* pgx
+
 ```
-DB_DRIVER=mysql # postgres
+DB_DRIVER=mysql # pgx
 DB_HOST=127.0.0.1
 DB_PORT=32084
 DB_USER=root
