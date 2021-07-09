@@ -61,7 +61,16 @@ func (dbe *Dbenv) Populate() error {
 	dbe.DB_NAME = name
 	dbe.DB_WRITE = write
 
-	dbe.ConnStr = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s",
+	var connStringFmt string
+
+	switch driver {
+	case "mysql":
+		connStringFmt = "%s:%s@tcp(%s:%s)/%s"
+	case "pgx":
+		connStringFmt = "postgres://%s:%s@%s:%s/%s"
+	}
+
+	dbe.ConnStr = fmt.Sprintf(connStringFmt,
 		dbe.DB_USER,
 		dbe.DB_PASS,
 		dbe.DB_HOST,
