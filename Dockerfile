@@ -1,0 +1,13 @@
+FROM scratch
+
+EXPOSE 8080
+ENV DB_DRIVER=pgx
+ENV DB_HOST=127.0.0.1
+ENV DB_PORT=5432
+ENV DB_USER=postgres
+ENV DB_PASS=postgres
+ENV DB_NAME=mydb
+ENV DB_WRITE=false
+
+COPY gabi /
+CMD ["/gabi"]
