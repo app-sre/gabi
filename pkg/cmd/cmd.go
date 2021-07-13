@@ -13,6 +13,7 @@ import (
 	"go.uber.org/zap"
 
 	gabi "github.com/app-sre/gabi/pkg"
+	"github.com/app-sre/gabi/pkg/audit"
 	"github.com/app-sre/gabi/pkg/env/db"
 	"github.com/app-sre/gabi/pkg/handlers"
 )
@@ -23,18 +24,23 @@ func Run(logger *zap.SugaredLogger) {
 	if err != nil {
 		logger.Fatal(err)
 	}
-
 	logger.Info("Database environment variables populated.")
 
+	// Add audit backend selection method via viper / config files
+	a := &audit.LoggingAudit{Logger: logger}
+
+	logger.Info("Using default audit backend: stdout logger.")
+
+	logger.Info("Establishing DB connection pool.")
 	db, err := sql.Open(dbe.DB_DRIVER, dbe.ConnStr)
 	if err != nil {
 		logger.Fatal("Fatal error opening database.")
 	}
 	defer db.Close()
-
-	env := &gabi.Env{DB: db, Logger: logger}
 	logger.Info("Database connection handle established.")
 	logger.Infof("Using %s database driver.", dbe.DB_DRIVER)
+
+	env := &gabi.Env{DB: db, Logger: logger, Audit: a}
 
 	r := mux.NewRouter()
 
