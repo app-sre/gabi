@@ -1,24 +1,34 @@
 package audit
 
 import (
-	"time"
-
-	gabi "github.com/app-sre/gabi/pkg"
+	"go.uber.org/zap"
 )
 
-// stdout logging (json format, with "query", "user", "ts" values).
+type QueryData struct {
+	Query     string
+	User      string
+	Timestamp int64
+}
+
 type Audit interface {
-	write(QueryMetadata) error
+	Write(*QueryData) error
 }
 
-type QueryMetadata struct {
-	timestamp time.Time
-	query     string
-	user      string
+type LoggingAudit struct {
+	Logger *zap.SugaredLogger
 }
 
-func LogAudit(env *gabi.Env, q *QueryMetadata) error {
-
+func (d *LoggingAudit) Write(q *QueryData) error {
+	d.Logger.Infow("gabi API audit record",
+		"Query", q.Query,
+		"User", q.User,
+		"Timestamp", q.Timestamp,
+	)
+	return nil
 }
 
-func CloudwatchAudit() error
+type CloudwatchAudit struct{}
+
+func (c *CloudwatchAudit) Write(q *QueryData) error {
+	return nil
+}
