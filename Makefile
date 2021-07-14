@@ -11,5 +11,5 @@ linux:
 clean:
 	rm -f gabi
 
-docker-build: clean linux
+docker-build:
 	$(BUILD_CMD) -t ${IMG} -f Dockerfile .
