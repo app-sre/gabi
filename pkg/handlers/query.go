@@ -40,8 +40,6 @@ func Query(env *gabi.Env) http.HandlerFunc {
 
 		env.Audit.Write(qd)
 
-		env.Logger.Infof("Query %q", q.Query)
-
 		rows, err := env.DB.Query(q.Query)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
