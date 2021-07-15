@@ -5,11 +5,13 @@ import (
 	"encoding/json"
 	"net/http"
 	"reflect"
+	"time"
 
 	gabi "github.com/app-sre/gabi/pkg"
+	"github.com/app-sre/gabi/pkg/audit"
 )
 
-type QueryData struct {
+type query struct {
 	Query string
 }
 
@@ -19,12 +21,23 @@ func Query(env *gabi.Env) http.HandlerFunc {
 			env.Logger.Infof("Header field %q, Value %q", k, v)
 		}
 
-		var q QueryData
+		var q query
+
 		err := json.NewDecoder(r.Body).Decode(&q)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
+
+		now := time.Now()
+		qd := &audit.QueryData{
+			Query:     q.Query,
+			User:      "placeholder",
+			Timestamp: now.Unix(),
+		}
+
+		env.Audit.Write(qd)
+
 		env.Logger.Infof("Query %q", q.Query)
 
 		rows, err := env.DB.Query(q.Query)
@@ -32,18 +45,24 @@ func Query(env *gabi.Env) http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		}
 		defer rows.Close()
+
 		cols, err := rows.Columns() // Remember to check err afterwards
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		}
+
 		vals := make([]interface{}, len(cols))
+
 		var result [][]string
 		var keys []string
+
 		for i := range cols {
 			vals[i] = new(sql.RawBytes)
 			keys = append(keys, cols[i])
 		}
+
 		result = append(result, keys)
+
 		for rows.Next() {
 			err = rows.Scan(vals...)
 			// Now you can check each element of vals for nil-ness,
@@ -52,17 +71,21 @@ func Query(env *gabi.Env) http.HandlerFunc {
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 			}
+
 			var row []string
+
 			for _, value := range vals {
 				content := reflect.ValueOf(value).Interface().(*sql.RawBytes)
 				row = append(row, string(*content))
 			}
 			result = append(result, row)
 		}
+
 		err = rows.Err()
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		}
+
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(result)
 	}
