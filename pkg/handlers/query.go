@@ -17,9 +17,6 @@ type query struct {
 
 func Query(env *gabi.Env) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		for k, v := range r.Header {
-			env.Logger.Infof("Header field %q, Value %q", k, v)
-		}
 
 		var q query
 
@@ -30,9 +27,14 @@ func Query(env *gabi.Env) http.HandlerFunc {
 		}
 
 		now := time.Now()
+		user := r.Header.Get("X-Forwarded-User")
+		if user == "" {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
 		qd := &audit.QueryData{
 			Query:     q.Query,
-			User:      "placeholder",
+			User:      user,
 			Timestamp: now.Unix(),
 		}
 
@@ -43,12 +45,14 @@ func Query(env *gabi.Env) http.HandlerFunc {
 		rows, err := env.DB.Query(q.Query)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
 		}
 		defer rows.Close()
 
 		cols, err := rows.Columns() // Remember to check err afterwards
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
 		}
 
 		vals := make([]interface{}, len(cols))
@@ -70,6 +74,7 @@ func Query(env *gabi.Env) http.HandlerFunc {
 			// to fetch the column into a typed variable.
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
 			}
 
 			var row []string
@@ -84,6 +89,7 @@ func Query(env *gabi.Env) http.HandlerFunc {
 		err = rows.Err()
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
