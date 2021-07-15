@@ -11,6 +11,8 @@ IMG="${BASE_IMG}:latest"
 GIT_HASH=`git rev-parse --short=7 HEAD`
 
 # build the image
+docker login quay.io -u ${QUAY_USER} -p ${QUAY_TOKEN}
+
 BUILD_CMD="docker build" IMG="$IMG" make docker-build
 
 # push the image to quay
