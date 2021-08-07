@@ -147,6 +147,7 @@ objects:
       kubernetes.io/tls-acme: "true"    
     name: gabi
   spec:
+    host: ${HOST}
     port:
       targetPort: 3000
     to:
@@ -173,3 +174,5 @@ parameters:
   value: "false"
 - name: AWS_RDS_SECRET_NAME
   value: db-creds
+- name: HOST
+  value: example.com
