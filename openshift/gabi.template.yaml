@@ -87,6 +87,18 @@ objects:
         - image: quay.io/app-sre/gabi:${IMAGE_TAG}
           name: gabi
           env:
+          - name: NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.namespace
           - name: DB_DRIVER
             value: ${DB_DRIVER}
           - name: DB_WRITE
