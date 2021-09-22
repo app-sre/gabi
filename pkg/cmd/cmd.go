@@ -15,6 +15,7 @@ import (
 	gabi "github.com/app-sre/gabi/pkg"
 	"github.com/app-sre/gabi/pkg/audit"
 	"github.com/app-sre/gabi/pkg/env/db"
+	"github.com/app-sre/gabi/pkg/env/splunk"
 	"github.com/app-sre/gabi/pkg/handlers"
 )
 
@@ -26,10 +27,19 @@ func Run(logger *zap.SugaredLogger) {
 	}
 	logger.Info("Database environment variables populated.")
 
-	// Add audit backend selection method via viper / config files
 	a := &audit.LoggingAudit{Logger: logger}
-
 	logger.Info("Using default audit backend: stdout logger.")
+
+	se := &splunk.Splunkenv{}
+	err = se.Populate()
+	if err != nil {
+		logger.Fatal(err)
+	}
+	logger.Info("Splunk environment variables populated.")
+
+	s := &audit.SplunkAudit{}
+	s.Init(se)
+	logger.Info("Using Splunk audit backend.")
 
 	logger.Info("Establishing DB connection pool.")
 	db, err := sql.Open(dbe.DB_DRIVER, dbe.ConnStr)
@@ -40,7 +50,7 @@ func Run(logger *zap.SugaredLogger) {
 	logger.Info("Database connection handle established.")
 	logger.Infof("Using %s database driver.", dbe.DB_DRIVER)
 
-	env := &gabi.Env{DB: db, Logger: logger, Audit: a}
+	env := &gabi.Env{DB: db, Logger: logger, Audit: a, SplunkAudit: *s}
 
 	r := mux.NewRouter()
 
