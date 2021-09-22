@@ -15,6 +15,7 @@ type Splunkenv struct {
 	POD string
 	SOURCE string
 	SOURCETYPE string
+	HOST string
 }
 
 func (se *Splunkenv) Populate() error {
@@ -38,6 +39,10 @@ func (se *Splunkenv) Populate() error {
 	if !(found) {
 		return &env.EnvError{Env: "POD_NAME"}
 	}
+	host, found := os.LookupEnv("HOST")
+	if !(found) {
+		return &env.EnvError{Env: "HOST"}
+	}
 
 	se.SPLUNK_INDEX = index
 	se.SPLUNK_TOKEN = token
@@ -47,6 +52,7 @@ func (se *Splunkenv) Populate() error {
 	se.POD = pod
 	se.SOURCE = "gabi"
 	se.SOURCETYPE = "json"
+	se.HOST = host
 
 	return nil
 }

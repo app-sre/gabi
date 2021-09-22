@@ -75,6 +75,7 @@ func (d *SplunkAudit) Init(se *splunk.Splunkenv) {
 	d.Sourcetype = se.SOURCETYPE
 	d.Namespace = se.NAMESPACE
 	d.Pod = se.POD
+	d.Host = se.HOST
 }
 
 func (d *SplunkAudit) Write(s *SplunkQueryData) (SplunkResponse, error) {
