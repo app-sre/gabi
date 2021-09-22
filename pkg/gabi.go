@@ -13,4 +13,5 @@ type Env struct {
 	DB     *sql.DB
 	Logger *zap.SugaredLogger
 	Audit  audit.Audit
+	SplunkAudit audit.SplunkAudit
 }
