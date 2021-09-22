@@ -34,9 +34,9 @@ func (se *Splunkenv) Populate() error {
 	if !(found) {
 		return &env.EnvError{Env: "NAMESPACE"}
 	}
-	pod, found := os.LookupEnv("POD")
+	pod, found := os.LookupEnv("POD_NAME")
 	if !(found) {
-		return &env.EnvError{Env: "POD"}
+		return &env.EnvError{Env: "POD_NAME"}
 	}
 
 	se.SPLUNK_INDEX = index
