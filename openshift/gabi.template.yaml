@@ -204,3 +204,5 @@ parameters:
   value: app-sre
 - name: POD_NAME
   value: gabi-staging
+- name: SPLUNK_SECRET_NAME
+  value: splunk-creds
