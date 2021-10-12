@@ -37,8 +37,7 @@ func Run(logger *zap.SugaredLogger) {
 	}
 	logger.Info("Splunk environment variables populated.")
 
-	s := &audit.SplunkAudit{}
-	s.Init(se)
+	s := &audit.SplunkAudit{Env: se}
 	logger.Info("Using Splunk audit backend.")
 
 	logger.Info("Establishing DB connection pool.")
