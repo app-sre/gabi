@@ -87,6 +87,26 @@ objects:
         - image: quay.io/app-sre/gabi:${IMAGE_TAG}
           name: gabi
           env:
+          - name: HOST
+            value: ${HOST}
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: NAMESPACE
+            value: ${NAMESPACE}
+          - name: SPLUNK_INDEX
+            value: ${SPLUNK_INDEX}
+          - name: SPLUNK_TOKEN
+            valueFrom:
+              secretKeyRef:
+                key: Token
+                name: ${SPLUNK_SECRET_NAME}
+          - name: SPLUNK_ENDPOINT
+            valueFrom:
+              secretKeyRef:
+                key: URL
+                name: ${SPLUNK_SECRET_NAME}
           - name: DB_DRIVER
             value: ${DB_DRIVER}
           - name: DB_WRITE
@@ -176,3 +196,13 @@ parameters:
   value: db-creds
 - name: HOST
   value: example.com
+- name: SPLUNK_ENDPOINT
+  value: example.com
+- name: SPLUNK_TOKEN
+  value: 0000-0000-0000-0000
+- name: SPLUNK_INDEX
+  value: app-sre
+- name: POD_NAME
+  value: gabi-staging
+- name: SPLUNK_SECRET_NAME
+  value: splunk-creds

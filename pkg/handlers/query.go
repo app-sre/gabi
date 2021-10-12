@@ -3,22 +3,30 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"reflect"
+	"strconv"
 	"time"
 
 	gabi "github.com/app-sre/gabi/pkg"
 	"github.com/app-sre/gabi/pkg/audit"
 )
 
-type query struct {
+type QueryRequest struct {
 	Query string
+}
+
+type QueryResponse struct {
+	Result [][]string `json:"result"`
+	Error error       `json:"error"`
 }
 
 func Query(env *gabi.Env) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		var q query
+		var q QueryRequest
+		var ret QueryResponse
 
 		err := json.NewDecoder(r.Body).Decode(&q)
 		if err != nil {
@@ -39,6 +47,27 @@ func Query(env *gabi.Env) http.HandlerFunc {
 		}
 
 		env.Audit.Write(qd)
+
+		sed := &audit.SplunkEventData{
+			Query: q.Query,
+			User: user,
+		}
+
+		sqd := &audit.SplunkQueryData{
+			Event: sed,
+			Time: now.Unix(),
+		}
+
+		resp, err := env.SplunkAudit.Write(sqd)
+		if err != nil {
+			ret.Error = err
+			json.NewEncoder(w).Encode(ret)
+			return
+		} else if resp.Code != 0 {
+			ret.Error = errors.New("Splunk error: " + resp.Text + " - Code: " + strconv.Itoa(resp.Code))
+			json.NewEncoder(w).Encode(ret)
+			return
+		}
 
 		rows, err := env.DB.Query(q.Query)
 		if err != nil {
@@ -86,11 +115,13 @@ func Query(env *gabi.Env) http.HandlerFunc {
 
 		err = rows.Err()
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			ret.Error = err
+			json.NewEncoder(w).Encode(ret)
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(result)
+		ret.Result = result
+		ret.Error = nil
+		json.NewEncoder(w).Encode(ret)
 	}
 }
