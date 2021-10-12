@@ -7,15 +7,15 @@ import (
 )
 
 type Splunkenv struct {
-	SPLUNK_INDEX string
-	SPLUNK_TOKEN   string
-	SPLUNK_ENDPOINT   string
-	URL string
-	NAMESPACE string
-	POD string
-	SOURCE string
-	SOURCETYPE string
-	HOST string
+	SPLUNK_INDEX    string
+	SPLUNK_TOKEN    string
+	SPLUNK_ENDPOINT string
+	URL             string
+	NAMESPACE       string
+	POD             string
+	SOURCE          string
+	SOURCETYPE      string
+	HOST            string
 }
 
 func (se *Splunkenv) Populate() error {
