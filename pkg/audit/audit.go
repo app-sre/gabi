@@ -57,36 +57,18 @@ type SplunkResponse struct {
 }
 
 type SplunkAudit struct {
-	Index      string
-	Token      string
-	Endpoint   string
-	Host       string
-	Pod        string
-	Namespace  string
-	Source     string
-	Sourcetype string
-}
-
-func (d *SplunkAudit) Init(se *splunk.Splunkenv) {
-	d.Index = se.SPLUNK_INDEX
-	d.Token = se.SPLUNK_TOKEN
-	d.Endpoint = se.URL
-	d.Source = se.SOURCE
-	d.Sourcetype = se.SOURCETYPE
-	d.Namespace = se.NAMESPACE
-	d.Pod = se.POD
-	d.Host = se.HOST
+	Env *splunk.Splunkenv
 }
 
 func (d *SplunkAudit) Write(s *SplunkQueryData) (SplunkResponse, error) {
 	splunkResp := &SplunkResponse{}
 
-	s.Index = d.Index
-	s.Host = d.Host
-	s.Source = d.Source
-	s.Sourcetype = d.Sourcetype
-	s.Event.Namespace = d.Namespace
-	s.Event.Pod = d.Pod
+	s.Index = d.Env.SPLUNK_INDEX
+	s.Host = d.Env.HOST
+	s.Source = d.Env.SOURCE
+	s.Sourcetype = d.Env.SOURCETYPE
+	s.Event.Namespace = d.Env.NAMESPACE
+	s.Event.Pod = d.Env.POD
 
 	postBody, _ := json.Marshal(s)
 	responseBody := bytes.NewBuffer(postBody)
@@ -99,11 +81,11 @@ func (d *SplunkAudit) Write(s *SplunkQueryData) (SplunkResponse, error) {
 		},
 	}
 
-	req, err := http.NewRequest("POST", d.Endpoint, responseBody)
+	req, err := http.NewRequest("POST", d.Env.URL, responseBody)
 	if err != nil {
     	return *splunkResp, err
 	}
-	req.Header.Add("Authorization", "Splunk " + d.Token)
+	req.Header.Add("Authorization", "Splunk " + d.Env.SPLUNK_TOKEN)
 	req.Header.Add("Content-Type", "application/json")
 
 	resp, err := client.Do(req)
