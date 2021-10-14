@@ -3,7 +3,6 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -19,7 +18,7 @@ type QueryRequest struct {
 
 type QueryResponse struct {
 	Result [][]string `json:"result"`
-	Error error       `json:"error"`
+	Error string      `json:"error"`
 }
 
 func Query(env *gabi.Env) http.HandlerFunc {
@@ -60,11 +59,11 @@ func Query(env *gabi.Env) http.HandlerFunc {
 
 		resp, err := env.SplunkAudit.Write(sqd)
 		if err != nil {
-			ret.Error = err
+			ret.Error = err.Error()
 			json.NewEncoder(w).Encode(ret)
 			return
 		} else if resp.Code != 0 {
-			ret.Error = errors.New("Splunk error: " + resp.Text + " - Code: " + strconv.Itoa(resp.Code))
+			ret.Error = "Splunk error: " + resp.Text + " - Code: " + strconv.Itoa(resp.Code)
 			json.NewEncoder(w).Encode(ret)
 			return
 		}
@@ -115,13 +114,13 @@ func Query(env *gabi.Env) http.HandlerFunc {
 
 		err = rows.Err()
 		if err != nil {
-			ret.Error = err
+			ret.Error = err.Error()
 			json.NewEncoder(w).Encode(ret)
 			return
 		}
 
 		ret.Result = result
-		ret.Error = nil
+		ret.Error = ""
 		json.NewEncoder(w).Encode(ret)
 	}
 }
