@@ -16,12 +16,20 @@ import (
 	"github.com/app-sre/gabi/pkg/audit"
 	"github.com/app-sre/gabi/pkg/env/db"
 	"github.com/app-sre/gabi/pkg/env/splunk"
+	"github.com/app-sre/gabi/pkg/env/user"
 	"github.com/app-sre/gabi/pkg/handlers"
 )
 
 func Run(logger *zap.SugaredLogger) {
+	usere := user.Userenv{}
+	err := usere.Populate()
+	if err != nil {
+		logger.Fatal(err)
+	}
+	logger.Info("Authorized Users populated.")
+
 	dbe := db.Dbenv{}
-	err := dbe.Populate()
+	err = dbe.Populate()
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -49,7 +57,7 @@ func Run(logger *zap.SugaredLogger) {
 	logger.Info("Database connection handle established.")
 	logger.Infof("Using %s database driver.", dbe.DB_DRIVER)
 
-	env := &gabi.Env{DB: db, Logger: logger, Audit: a, SplunkAudit: *s}
+	env := &gabi.Env{DB: db, Logger: logger, Audit: a, SplunkAudit: *s, Users: usere.Users}
 
 	r := mux.NewRouter()
 

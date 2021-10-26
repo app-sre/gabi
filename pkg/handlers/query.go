@@ -18,7 +18,16 @@ type QueryRequest struct {
 
 type QueryResponse struct {
 	Result [][]string `json:"result"`
-	Error string      `json:"error"`
+	Error  string     `json:"error"`
+}
+
+func stringInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
 }
 
 func Query(env *gabi.Env) http.HandlerFunc {
@@ -35,7 +44,7 @@ func Query(env *gabi.Env) http.HandlerFunc {
 
 		now := time.Now()
 		user := r.Header.Get("X-Forwarded-User")
-		if user == "" {
+		if user == "" || !stringInSlice(user, env.Users) {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -49,12 +58,12 @@ func Query(env *gabi.Env) http.HandlerFunc {
 
 		sed := &audit.SplunkEventData{
 			Query: q.Query,
-			User: user,
+			User:  user,
 		}
 
 		sqd := &audit.SplunkQueryData{
 			Event: sed,
-			Time: now.Unix(),
+			Time:  now.Unix(),
 		}
 
 		resp, err := env.SplunkAudit.Write(sqd)
