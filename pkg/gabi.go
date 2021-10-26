@@ -10,8 +10,9 @@ import (
 const Version = "0.0.1"
 
 type Env struct {
-	DB     *sql.DB
-	Logger *zap.SugaredLogger
-	Audit  audit.Audit
+	DB          *sql.DB
+	Logger      *zap.SugaredLogger
+	Audit       audit.Audit
 	SplunkAudit audit.SplunkAudit
+	Users       []string
 }

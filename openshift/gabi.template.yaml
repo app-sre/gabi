@@ -29,7 +29,7 @@ objects:
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: ClusterRoleBinding
   metadata:
-    name: openshift-oauth-delegate-gabi
+    name: openshift-oauth-delegate-gabi-${NAMESPACE}
   subjects:
     - kind: ServiceAccount
       name: gabi
@@ -86,6 +86,9 @@ objects:
             name: gabi-tls
         - image: quay.io/app-sre/gabi:${IMAGE_TAG}
           name: gabi
+          volumeMounts:
+          - name: gabi-users
+            mountPath: /config
           env:
           - name: HOST
             value: ${HOST}
@@ -136,6 +139,8 @@ objects:
               secretKeyRef:
                 key: db.name
                 name: ${AWS_RDS_SECRET_NAME}
+          - name: USERS_FILE_PATH
+            value: ${USERS_FILE_PATH}
           resources:
             requests:
               cpu: 100m
@@ -147,6 +152,10 @@ objects:
         - name: gabi-tls
           secret:
             secretName: gabi-tls
+        - name: gabi-users
+          configMap:
+            optional: true
+            name: ${USERS_CONFIGMAP_NAME}
 - apiVersion: v1
   kind: Service
   metadata:
@@ -155,9 +164,10 @@ objects:
       service.alpha.openshift.io/serving-cert-secret-name: gabi-tls
   spec:
     ports:
-    - port: 3000
+    - name: http
+      port: 3000
       protocol: TCP
-      targetPort: 3000
+      targetPort: http
     selector:
       app: gabi
 - apiVersion: route.openshift.io/v1
@@ -169,7 +179,7 @@ objects:
   spec:
     host: ${HOST}
     port:
-      targetPort: 3000
+      targetPort: http
     to:
       kind: Service
       name: gabi
@@ -206,3 +216,7 @@ parameters:
   value: gabi-staging
 - name: SPLUNK_SECRET_NAME
   value: splunk-creds
+- name: USERS_CONFIGMAP_NAME
+  value: gabi-authorized-users
+- name: USERS_FILE_PATH
+  value: /config/authorized-users.yaml
