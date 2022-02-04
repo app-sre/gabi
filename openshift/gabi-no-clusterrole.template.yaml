@@ -1,0 +1,201 @@
+apiVersion: v1
+kind: Template
+metadata:
+  name: gabi
+objects:
+- apiVersion: v1
+  kind: ServiceAccount
+  metadata:
+    name: gabi
+    annotations:
+      serviceaccounts.openshift.io/oauth-redirectreference.prometheus: '{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"gabi"}}'
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: ClusterRoleBinding
+  metadata:
+    name: gabi-openshift-oauth-delegate-${NAMESPACE}
+  subjects:
+    - kind: ServiceAccount
+      name: gabi
+      namespace: ${NAMESPACE}
+  roleRef:
+    kind: ClusterRole
+    name: gabi-openshift-oauth-delegate
+    apiGroup: rbac.authorization.k8s.io
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    labels:
+      app: gabi
+    name: gabi
+  spec:
+    replicas: ${{REPLICAS}}
+    selector:
+      matchLabels:
+        app: gabi
+    template:
+      metadata:
+        labels:
+          app: gabi
+      spec:
+        serviceAccountName: gabi
+        containers:
+        - name: oauth-proxy
+          image: ${OAUTH_PROXY_IMAGE_NAME}:${OAUTH_PROXY_IMAGE_TAG}
+          imagePullPolicy: IfNotPresent
+          ports:
+          - containerPort: 3000
+            name: http
+            protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            periodSeconds: 10
+            successThreshold: 1
+            httpGet:
+              path: /oauth/healthz
+              port: http
+              scheme: HTTPS
+            timeoutSeconds: 1
+          args:
+          - --https-address=:3000
+          - --provider=openshift
+          - --openshift-service-account=gabi
+          - --upstream=http://localhost:8080
+          - '--openshift-delegate-urls={"/": {"resource": "namespaces", "verb": "get", "name": "${NAMESPACE}", "namespace": "${NAMESPACE}"}}'
+          - --tls-cert=/etc/tls/private/tls.crt
+          - --tls-key=/etc/tls/private/tls.key
+          - --cookie-secret-file=/var/run/secrets/kubernetes.io/serviceaccount/token
+          volumeMounts:
+          - mountPath: /etc/tls/private
+            name: gabi-tls
+        - image: quay.io/app-sre/gabi:${IMAGE_TAG}
+          name: gabi
+          volumeMounts:
+          - name: gabi-users
+            mountPath: /config
+          env:
+          - name: HOST
+            value: ${HOST}
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: NAMESPACE
+            value: ${NAMESPACE}
+          - name: SPLUNK_INDEX
+            value: ${SPLUNK_INDEX}
+          - name: SPLUNK_TOKEN
+            valueFrom:
+              secretKeyRef:
+                key: Token
+                name: ${SPLUNK_SECRET_NAME}
+          - name: SPLUNK_ENDPOINT
+            valueFrom:
+              secretKeyRef:
+                key: URL
+                name: ${SPLUNK_SECRET_NAME}
+          - name: DB_DRIVER
+            value: ${DB_DRIVER}
+          - name: DB_WRITE
+            value: ${DB_WRITE}
+          - name: DB_HOST
+            valueFrom:
+              secretKeyRef:
+                key: db.host
+                name: ${AWS_RDS_SECRET_NAME}
+          - name: DB_PORT
+            valueFrom:
+              secretKeyRef:
+                key: db.port
+                name: ${AWS_RDS_SECRET_NAME}
+          - name: DB_USER
+            valueFrom:
+              secretKeyRef:
+                key: db.user
+                name: ${AWS_RDS_SECRET_NAME}
+          - name: DB_PASS
+            valueFrom:
+              secretKeyRef:
+                key: db.password
+                name: ${AWS_RDS_SECRET_NAME}
+          - name: DB_NAME
+            valueFrom:
+              secretKeyRef:
+                key: db.name
+                name: ${AWS_RDS_SECRET_NAME}
+          - name: USERS_FILE_PATH
+            value: ${USERS_FILE_PATH}
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+        volumes:
+        - name: gabi-tls
+          secret:
+            secretName: gabi-tls
+        - name: gabi-users
+          configMap:
+            optional: true
+            name: ${USERS_CONFIGMAP_NAME}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: gabi
+    annotations:
+      service.alpha.openshift.io/serving-cert-secret-name: gabi-tls
+  spec:
+    ports:
+    - name: http
+      port: 3000
+      protocol: TCP
+      targetPort: http
+    selector:
+      app: gabi
+- apiVersion: route.openshift.io/v1
+  kind: Route
+  metadata:
+    annotations:
+      kubernetes.io/tls-acme: "true"    
+    name: gabi
+  spec:
+    host: ${HOST}
+    port:
+      targetPort: http
+    to:
+      kind: Service
+      name: gabi
+      weight: 100
+    tls:
+      termination: Reencrypt
+      insecureEdgeTerminationPolicy: Redirect
+parameters:
+- name: NAMESPACE
+  value: gabi
+- name: IMAGE_TAG
+  value: latest
+- name: REPLICAS
+  value: "1"
+- name: OAUTH_PROXY_IMAGE_NAME
+  value: quay.io/openshift/origin-oauth-proxy
+- name: OAUTH_PROXY_IMAGE_TAG
+  value: "4.10.0"
+- name: DB_DRIVER
+  value: pgx
+- name: DB_WRITE
+  value: "false"
+- name: AWS_RDS_SECRET_NAME
+  value: db-creds
+- name: HOST
+  value: example.com
+- name: SPLUNK_INDEX
+  value: app-sre
+- name: POD_NAME
+  value: gabi-staging
+- name: SPLUNK_SECRET_NAME
+  value: splunk-creds
+- name: USERS_CONFIGMAP_NAME
+  value: gabi-authorized-users
+- name: USERS_FILE_PATH
+  value: /config/authorized-users.yaml
