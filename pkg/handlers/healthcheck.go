@@ -20,11 +20,11 @@ func Healthcheck(env *gabi.Env) http.Handler {
 			"database", healthcheck.CheckerFunc(
 				func(ctx context.Context) error {
 					err := env.DB.PingContext(ctx)
-						if err != nil {
-							errStr := "failed to connect to database as part of healthcheck ping"
-							logErr := fmt.Errorf(errStr + ": %v", err)
-							log.Println(logErr)
-							return errors.New("failed to connect database... see gabi logs for further details")
+					if err != nil {
+						errStr := "failed to connect to database as part of healthcheck ping"
+						logErr := fmt.Errorf(errStr + ": %v", err)
+						log.Println(logErr)
+						return errors.New("failed to connect database... see gabi logs for further details")
 					}
 					return nil // healthcheck passed successfully
 				},
