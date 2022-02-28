@@ -2,6 +2,7 @@ package db
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
 
@@ -68,6 +69,7 @@ func (dbe *Dbenv) Populate() error {
 		connStringFmt = "%s:%s@tcp(%s:%s)/%s"
 	case "pgx":
 		connStringFmt = "postgres://%s:%s@%s:%s/%s"
+		dbe.DB_PASS = url.PathEscape(dbe.DB_PASS) // only do this for pgx driver bc mysql driver will handle encoding
 	}
 
 	dbe.ConnStr = fmt.Sprintf(connStringFmt,
