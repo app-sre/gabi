@@ -11,6 +11,7 @@ const Version = "0.0.1"
 
 type Env struct {
 	DB          *sql.DB
+	DB_WRITE    bool
 	Logger      *zap.SugaredLogger
 	Audit       audit.Audit
 	SplunkAudit audit.SplunkAudit

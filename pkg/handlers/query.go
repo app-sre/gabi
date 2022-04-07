@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"net/http"
@@ -77,7 +78,14 @@ func Query(env *gabi.Env) http.HandlerFunc {
 			return
 		}
 
-		rows, err := env.DB.Query(q.Query)
+		ctx := context.Background()
+		txo := sql.TxOptions{ReadOnly: !env.DB_WRITE}
+		tx, err := env.DB.BeginTx(ctx, &txo)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		rows, err := tx.Query(q.Query)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -126,6 +134,11 @@ func Query(env *gabi.Env) http.HandlerFunc {
 			ret.Error = err.Error()
 			json.NewEncoder(w).Encode(ret)
 			return
+		}
+
+		err = tx.Commit()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
 		}
 
 		ret.Result = result
