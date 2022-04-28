@@ -112,6 +112,11 @@ objects:
                 name: ${AWS_RDS_SECRET_NAME}
           - name: USERS_FILE_PATH
             value: ${USERS_FILE_PATH}
+          - name: INSTANCE_EXPIRATION
+            valueFrom:
+              configMapKeyRef:
+                name: ${USERS_CONFIGMAP_NAME}
+                key: expiration
           resources:
             requests:
               cpu: 100m

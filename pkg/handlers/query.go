@@ -44,6 +44,10 @@ func Query(env *gabi.Env) http.HandlerFunc {
 		}
 
 		now := time.Now()
+		if now.After(env.Expiration) {
+			http.Error(w, "Instance expired", http.StatusUnauthorized)
+			return
+		}
 		user := r.Header.Get("X-Forwarded-User")
 		if user == "" || !stringInSlice(user, env.Users) {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)

@@ -3,12 +3,14 @@ package user
 import (
 	"bufio"
 	"os"
+	"time"
 
 	"github.com/app-sre/gabi/pkg/env"
 )
 
 type Userenv struct {
 	Users []string
+	Expiration time.Time
 }
 
 func (usere *Userenv) Populate() error {
@@ -31,6 +33,16 @@ func (usere *Userenv) Populate() error {
 
 	if err := scanner.Err(); err != nil {
 		return err
+	}
+
+	expiration, found := os.LookupEnv("INSTANCE_EXPIRATION")
+	if !(found) {
+		return &env.EnvError{Env: "INSTANCE_EXPIRATION"}
+	}
+	if parsed_expiration, err := time.Parse("2006-01-02", expiration); err != nil {
+		return err
+	} else {
+		usere.Expiration = parsed_expiration
 	}
 
 	return nil
