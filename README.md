@@ -36,20 +36,48 @@ The service is written in golang and is intended to be run as a Kubernetes or Op
 
 `TODO`
 
+Create a authorized-users.yamls file and set its path in USERS_FILE_PATH
+```
+user1
+user2
+```
+
+Start gabi server
 ```
 $ source .env.dev
-$ go run cmd/main.go
+$ go run cmd/gabi/main.go
 
-2021-07-08T20:53:30.065-0700	INFO	gabi/main.go:25	Starting gabi server version 0.0.1
-2021-07-08T20:53:30.065-0700	INFO	cmd/cmd.go:27	Database environment variables populated.
-2021-07-08T20:53:30.065-0700	INFO	cmd/cmd.go:34	Database connection handle established.
-2021-07-08T20:53:30.065-0700	INFO	cmd/cmd.go:35	Using mysql database driver.
-2021-07-08T20:53:30.065-0700	INFO	cmd/cmd.go:51	Router initialized.
-2021-07-08T20:53:30.065-0700	INFO	cmd/cmd.go:54	HTTP server starting on port 8080.
-::1 - - [08/Jul/2021:19:30:58 -0700] "GET / HTTP/1.1" 404 19
-::1 - - [08/Jul/2021:19:31:03 -0700] "GET /query HTTP/1.1" 404 19
-::1 - - [08/Jul/2021:19:31:06 -0700] "GET /healthcheck HTTP/1.1" 200 16
+2022-05-09T18:20:33.972+0800    INFO    gabi/main.go:20 Starting gabi server version 0.0.1
+2022-05-09T18:20:33.973+0800    INFO    cmd/cmd.go:29   Authorized Users populated.
+2022-05-09T18:20:33.973+0800    INFO    cmd/cmd.go:36   Database environment variables populated.
+2022-05-09T18:20:33.973+0800    INFO    cmd/cmd.go:39   Using default audit backend: stdout logger.
+2022-05-09T18:20:33.973+0800    INFO    cmd/cmd.go:46   Splunk environment variables populated.
+2022-05-09T18:20:33.973+0800    INFO    cmd/cmd.go:49   Using Splunk audit backend.
+2022-05-09T18:20:33.973+0800    INFO    cmd/cmd.go:51   Establishing DB connection pool.
+2022-05-09T18:20:33.974+0800    INFO    cmd/cmd.go:57   Database connection handle established.
+2022-05-09T18:20:33.974+0800    INFO    cmd/cmd.go:58   Using pgx database driver.
+2022-05-09T18:20:33.974+0800    INFO    cmd/cmd.go:67   Router initialized.
+2022-05-09T18:20:33.974+0800    INFO    cmd/cmd.go:70   HTTP server starting on port 8080.
+127.0.0.1 - - [09/May/2022:18:21:13 +0800] "GET /healthcheck HTTP/1.1" 200 16
+127.0.0.1 - - [09/May/2022:18:25:57 +0800] "POST /query HTTP/1.1" 200 39
 
+```
+
+Query example to list table_name in database (single quotes need to be replaced with `'\''` in queries run with curl)
+```
+$ curl 'http://localhost:8080/query' -H 'X-Forwarded-User: user1' -d '{ "query": "select table_name from information_schema.tables where table_schema='\''public'\''"}' -s | jq 
+
+{
+  "result": [
+    [
+      "table_name"
+    ],
+    [
+      "persons"
+    ]
+  ],
+  "error": ""
+}
 ```
 
 ## Detailed Operation
