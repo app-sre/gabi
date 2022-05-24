@@ -37,23 +37,25 @@ objects:
             name: http
             protocol: TCP
           readinessProbe:
-            failureThreshold: 3
-            periodSeconds: 10
-            successThreshold: 1
             httpGet:
               path: /oauth/healthz
               port: http
               scheme: HTTPS
+            initialDelaySeconds: 5
             timeoutSeconds: 1
+            failureThreshold: 3
+            periodSeconds: 10
+            successThreshold: 1
           livelinessProbe:
-            failureThreshold: 3
-            periodSeconds: 10
-            successThreshold: 1
             httpGet:
               path: /oauth/healthz
               port: http
               scheme: HTTPS
+            initialDelaySeconds: 5
             timeoutSeconds: 1
+            failureThreshold: 3
+            periodSeconds: 10
+            successThreshold: 1
           resources:
             limits:
               cpu: 20m
@@ -75,24 +77,26 @@ objects:
             name: gabi-tls
         - image: quay.io/app-sre/gabi:${IMAGE_TAG}
           name: gabi
-          livenessProbe:
-            exec:
-              command:
-              - curl
-              - http://localhost:8080/healthcheck
+          readynessProbe:
+            httpGet:
+              path: /healthcheck
+              port: 8080
+              scheme: HTTP
             initialDelaySeconds: 5
+            timeoutSeconds: 1
             failureThreshold: 3
             periodSeconds: 10
             successThreshold: 1
-        readinessProbe:
-          exec:
-            command:
-            - curl
-            - http://localhost:8080/healthcheck
-          initialDelaySeconds: 5
-          failureThreshold: 3
-          periodSeconds: 10
-          successThreshold: 1
+          livelinessProbe:
+            httpGet:
+              path: /healthcheck
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 5
+            timeoutSeconds: 1
+            failureThreshold: 3
+            periodSeconds: 10
+            successThreshold: 1
           volumeMounts:
           - name: gabi-users
             mountPath: /config
