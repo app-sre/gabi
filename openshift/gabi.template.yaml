@@ -74,7 +74,7 @@ objects:
               port: http
               scheme: HTTPS
             timeoutSeconds: 1
-          livelinessProbe:
+          livenessProbe:
             failureThreshold: 3
             periodSeconds: 10
             successThreshold: 1
@@ -104,7 +104,7 @@ objects:
             name: gabi-tls
         - image: quay.io/app-sre/gabi:${IMAGE_TAG}
           name: gabi
-          readynessProbe:
+          readinessProbe:
             httpGet:
               path: /healthcheck
               port: 8080
@@ -113,7 +113,7 @@ objects:
             failureThreshold: 3
             periodSeconds: 10
             successThreshold: 1
-          livelinessProbe:
+          livenessProbe:
             httpGet:
               path: /healthcheck
               port: 8080
