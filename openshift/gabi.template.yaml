@@ -44,6 +44,8 @@ objects:
     labels:
       app: gabi
     name: gabi
+    annotations:
+      ignore-check.kube-linter.io/minimum-three-replicas: "Gabi does not need 3 replicas"
   spec:
     replicas: ${{REPLICAS}}
     selector:
@@ -72,6 +74,22 @@ objects:
               port: http
               scheme: HTTPS
             timeoutSeconds: 1
+          livelinessProbe:
+            failureThreshold: 3
+            periodSeconds: 10
+            successThreshold: 1
+            httpGet:
+              path: /oauth/healthz
+              port: http
+              scheme: HTTPS
+            timeoutSeconds: 1
+          resources:
+            limits:
+              cpu: 20m
+              memory: 64Mi
+            requests:
+              cpu: 10m
+              memory: 20Mi
           args:
           - --https-address=:3000
           - --provider=openshift
@@ -86,6 +104,24 @@ objects:
             name: gabi-tls
         - image: quay.io/app-sre/gabi:${IMAGE_TAG}
           name: gabi
+          readynessProbe:
+            httpGet:
+              path: /healthcheck
+              port: 8080
+              scheme: HTTP
+            timeoutSeconds: 1
+            failureThreshold: 3
+            periodSeconds: 10
+            successThreshold: 1
+          livelinessProbe:
+            httpGet:
+              path: /healthcheck
+              port: 8080
+              scheme: HTTP
+            timeoutSeconds: 1
+            failureThreshold: 3
+            periodSeconds: 10
+            successThreshold: 1
           volumeMounts:
           - name: gabi-users
             mountPath: /config
@@ -174,7 +210,7 @@ objects:
   kind: Route
   metadata:
     annotations:
-      kubernetes.io/tls-acme: "true"    
+      kubernetes.io/tls-acme: "true"
       # https://access.redhat.com/documentation/en-us/red_hat_process_automation_manager/7.1/html/managing_and_monitoring_process_server/configuring-openshift-connection-timeout-proc
       haproxy.router.openshift.io/timeout: ${SERVER_TIMEOUT}
     name: gabi
