@@ -1,6 +1,7 @@
 package gabi
 
 import (
+	"time"
 	"database/sql"
 
 	"github.com/app-sre/gabi/pkg/audit"
@@ -16,4 +17,5 @@ type Env struct {
 	Audit       audit.Audit
 	SplunkAudit audit.SplunkAudit
 	Users       []string
+	Expiration	time.Time
 }

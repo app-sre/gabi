@@ -57,7 +57,7 @@ func Run(logger *zap.SugaredLogger) {
 	logger.Info("Database connection handle established.")
 	logger.Infof("Using %s database driver.", dbe.DB_DRIVER)
 
-	env := &gabi.Env{DB: db, DB_WRITE: dbe.DB_WRITE, Logger: logger, Audit: a, SplunkAudit: *s, Users: usere.Users}
+	env := &gabi.Env{DB: db, DB_WRITE: dbe.DB_WRITE, Logger: logger, Audit: a, SplunkAudit: *s, Users: usere.Users, Expiration: usere.Expiration}
 
 	r := mux.NewRouter()
 
