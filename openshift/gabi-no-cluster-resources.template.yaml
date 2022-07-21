@@ -185,7 +185,8 @@ objects:
   kind: Route
   metadata:
     annotations:
-      kubernetes.io/tls-acme: "true"
+      cert-manager.io/issuer-kind: ${{CERT_MANAGER_ISSUER_KIND}}
+      cert-manager.io/issuer-name: ${{CERT_MANAGER_ISSUER_NAME}}
       # https://access.redhat.com/documentation/en-us/red_hat_process_automation_manager/7.1/html/managing_and_monitoring_process_server/configuring-openshift-connection-timeout-proc
       haproxy.router.openshift.io/timeout: ${SERVER_TIMEOUT}
     name: gabi
@@ -231,3 +232,7 @@ parameters:
   value: gabi-authorized-users
 - name: USERS_FILE_PATH
   value: /config/authorized-users.yaml
+- name: CERT_MANAGER_ISSUER_KIND
+  value: ClusterIssuer
+- name: CERT_MANAGER_ISSUER_NAME
+  value: letsencrypt-prod-http
