@@ -43,7 +43,7 @@ objects:
   metadata:
     labels:
       app: gabi
-    name: gabi
+    name: ${identifier}
     annotations:
       ignore-check.kube-linter.io/minimum-three-replicas: "Gabi does not need 3 replicas"
   spec:
@@ -261,3 +261,5 @@ parameters:
   value: ClusterIssuer
 - name: CERT_MANAGER_ISSUER_NAME
   value: letsencrypt-prod-http
+- name: identifier
+  value: gabi
