@@ -162,7 +162,7 @@ objects:
         volumes:
         - name: gabi-tls
           secret:
-            secretName: gabi-tls
+            secretName: ${GABI_INSTANCE}-tls
         - name: gabi-users
           configMap:
             optional: true
