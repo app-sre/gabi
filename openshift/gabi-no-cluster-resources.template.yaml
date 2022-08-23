@@ -8,7 +8,7 @@ objects:
   metadata:
     name: ${GABI_INSTANCE}
     annotations:
-      serviceaccounts.openshift.io/oauth-redirectreference.prometheus: '{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"gabi"}}'
+      serviceaccounts.openshift.io/oauth-redirectreference.prometheus: '{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"${GABI_INSTANCE}"}}'
 - apiVersion: apps/v1
   kind: Deployment
   metadata:
@@ -170,7 +170,7 @@ objects:
 - apiVersion: v1
   kind: Service
   metadata:
-    name: ${GABI_INSTANCE}
+    name: ${GABI_INSTANCE}-tls
     annotations:
       service.alpha.openshift.io/serving-cert-secret-name: gabi-tls
   spec:
