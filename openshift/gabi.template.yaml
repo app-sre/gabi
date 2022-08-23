@@ -8,7 +8,7 @@ objects:
   metadata:
     name: ${GABI_INSTANCE}
     annotations:
-      serviceaccounts.openshift.io/oauth-redirectreference.prometheus: '{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"gabi"}}'
+      serviceaccounts.openshift.io/oauth-redirectreference.prometheus: '{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"${GABI_INSTANCE}"}}'
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: ClusterRole
   metadata:
@@ -93,7 +93,7 @@ objects:
           args:
           - --https-address=:3000
           - --provider=openshift
-          - --openshift-service-account=gabi
+          - --openshift-service-account=${GABI_INSTANCE}
           - --upstream=http://localhost:8080
           - '--openshift-delegate-urls={"/": {"resource": "namespaces", "verb": "get", "name": "${NAMESPACE}", "namespace": "${NAMESPACE}"}}'
           - --tls-cert=/etc/tls/private/tls.crt
@@ -197,7 +197,7 @@ objects:
   metadata:
     name: ${GABI_INSTANCE}
     annotations:
-      service.alpha.openshift.io/serving-cert-secret-name: gabi-tls
+      service.alpha.openshift.io/serving-cert-secret-name: ${GABI_INSTANCE}-tls
   spec:
     ports:
     - name: http

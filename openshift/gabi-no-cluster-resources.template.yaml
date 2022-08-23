@@ -66,7 +66,7 @@ objects:
           args:
           - --https-address=:3000
           - --provider=openshift
-          - --openshift-service-account=gabi
+          - --openshift-service-account=${GABI_INSTANCE}
           - --upstream=http://localhost:8080
           - '--openshift-delegate-urls={"/": {"resource": "namespaces", "verb": "get", "name": "${NAMESPACE}", "namespace": "${NAMESPACE}"}}'
           - --tls-cert=/etc/tls/private/tls.crt
@@ -170,9 +170,9 @@ objects:
 - apiVersion: v1
   kind: Service
   metadata:
-    name: ${GABI_INSTANCE}-tls
+    name: ${GABI_INSTANCE}
     annotations:
-      service.alpha.openshift.io/serving-cert-secret-name: gabi-tls
+      service.alpha.openshift.io/serving-cert-secret-name: ${GABI_INSTANCE}-tls
   spec:
     ports:
     - name: http
