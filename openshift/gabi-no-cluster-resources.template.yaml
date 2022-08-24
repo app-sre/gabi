@@ -1,33 +1,33 @@
 apiVersion: v1
 kind: Template
 metadata:
-  name: gabi
+  name: ${GABI_INSTANCE}
 objects:
 - apiVersion: v1
   kind: ServiceAccount
   metadata:
-    name: gabi
+    name: ${GABI_INSTANCE}
     annotations:
-      serviceaccounts.openshift.io/oauth-redirectreference.prometheus: '{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"gabi"}}'
+      serviceaccounts.openshift.io/oauth-redirectreference.prometheus: '{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"${GABI_INSTANCE}"}}'
 - apiVersion: apps/v1
   kind: Deployment
   metadata:
     labels:
-      app: gabi
-    name: gabi
+      app: ${GABI_INSTANCE}
+    name: ${GABI_INSTANCE}
     annotations:
       ignore-check.kube-linter.io/minimum-three-replicas: "Gabi does not need 3 replicas"
   spec:
     replicas: ${{REPLICAS}}
     selector:
       matchLabels:
-        app: gabi
+        app: ${GABI_INSTANCE}
     template:
       metadata:
         labels:
-          app: gabi
+          app: ${GABI_INSTANCE}
       spec:
-        serviceAccountName: gabi
+        serviceAccountName: ${GABI_INSTANCE}
         containers:
         - name: oauth-proxy
           image: ${OAUTH_PROXY_IMAGE_NAME}:${OAUTH_PROXY_IMAGE_TAG}
@@ -66,7 +66,7 @@ objects:
           args:
           - --https-address=:3000
           - --provider=openshift
-          - --openshift-service-account=gabi
+          - --openshift-service-account=${GABI_INSTANCE}
           - --upstream=http://localhost:8080
           - '--openshift-delegate-urls={"/": {"resource": "namespaces", "verb": "get", "name": "${NAMESPACE}", "namespace": "${NAMESPACE}"}}'
           - --tls-cert=/etc/tls/private/tls.crt
@@ -76,7 +76,7 @@ objects:
           - mountPath: /etc/tls/private
             name: gabi-tls
         - image: quay.io/app-sre/gabi:${IMAGE_TAG}
-          name: gabi
+          name: ${GABI_INSTANCE}
           readinessProbe:
             httpGet:
               path: /healthcheck
@@ -162,17 +162,17 @@ objects:
         volumes:
         - name: gabi-tls
           secret:
-            secretName: gabi-tls
+            secretName: ${GABI_INSTANCE}-tls
         - name: gabi-users
           configMap:
             optional: true
-            name: ${USERS_CONFIGMAP_NAME}
+            name: ${GABI_INSTANCE}
 - apiVersion: v1
   kind: Service
   metadata:
-    name: gabi
+    name: ${GABI_INSTANCE}
     annotations:
-      service.alpha.openshift.io/serving-cert-secret-name: gabi-tls
+      service.alpha.openshift.io/serving-cert-secret-name: ${GABI_INSTANCE}-tls
   spec:
     ports:
     - name: http
@@ -180,7 +180,7 @@ objects:
       protocol: TCP
       targetPort: http
     selector:
-      app: gabi
+      app: ${GABI_INSTANCE}
 - apiVersion: route.openshift.io/v1
   kind: Route
   metadata:
@@ -189,17 +189,17 @@ objects:
       cert-manager.io/issuer-name: ${{CERT_MANAGER_ISSUER_NAME}}
       # https://access.redhat.com/documentation/en-us/red_hat_process_automation_manager/7.1/html/managing_and_monitoring_process_server/configuring-openshift-connection-timeout-proc
       haproxy.router.openshift.io/timeout: ${SERVER_TIMEOUT}
-    name: gabi
+    name: ${GABI_INSTANCE}
   spec:
     host: ${HOST}
     port:
       targetPort: http
     to:
       kind: Service
-      name: gabi
+      name: ${GABI_INSTANCE}
       weight: 100
     tls:
-      termination: Reencrypt
+      termination: reencrypt
       insecureEdgeTerminationPolicy: Redirect
 parameters:
 - name: NAMESPACE
@@ -228,8 +228,8 @@ parameters:
   value: gabi-staging
 - name: SPLUNK_SECRET_NAME
   value: splunk-creds
-- name: USERS_CONFIGMAP_NAME
-  value: gabi-authorized-users
+- name: GABI_INSTANCE
+  value: gabi-instance
 - name: USERS_FILE_PATH
   value: /config/authorized-users.yaml
 - name: CERT_MANAGER_ISSUER_KIND
