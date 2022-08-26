@@ -115,12 +115,12 @@ objects:
             valueFrom:
               secretKeyRef:
                 key: SPLUNK_TOKEN
-                name: splunk
+                name: ${GABI_INSTANCE}-splunk
           - name: SPLUNK_ENDPOINT
             valueFrom:
               secretKeyRef:
                 key: SPLUNK_ENDPOINT
-                name: splunk
+                name: ${GABI_INSTANCE}-splunk
           - name: DB_DRIVER
             value: ${DB_DRIVER}
           - name: DB_WRITE
@@ -168,13 +168,13 @@ objects:
             optional: true
             name: ${GABI_INSTANCE}
 - apiVersion: v1
-  data:
-    SPLUNK_TOKEN: ${SPLUNK_TOKEN}
-    SPLUNK_ENDPOINT: ${SPLUNK_ENDPOINT}
   kind: Secret
   metadata:
-    name: splunk
+    name: ${GABI_INSTANCE}-splunk
   type: Opaque
+  stringData:
+    SPLUNK_TOKEN: ${SPLUNK_TOKEN}
+    SPLUNK_ENDPOINT: ${SPLUNK_ENDPOINT}
 - apiVersion: v1
   kind: Service
   metadata:
