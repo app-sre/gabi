@@ -9,35 +9,6 @@ objects:
     name: ${GABI_INSTANCE}
     annotations:
       serviceaccounts.openshift.io/oauth-redirectreference.prometheus: '{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"${GABI_INSTANCE}"}}'
-- apiVersion: rbac.authorization.k8s.io/v1
-  kind: ClusterRole
-  metadata:
-    name: openshift-oauth-delegate
-  rules:
-  - apiGroups:
-    - authentication.k8s.io
-    resources:
-    - tokenreviews
-    verbs:
-    - create
-  - apiGroups:
-    - authorization.k8s.io
-    resources:
-    - subjectaccessreviews
-    verbs:
-    - create
-- apiVersion: rbac.authorization.k8s.io/v1
-  kind: ClusterRoleBinding
-  metadata:
-    name: openshift-oauth-delegate-gabi-${NAMESPACE}
-  subjects:
-    - kind: ServiceAccount
-      name: ${GABI_INSTANCE}
-      namespace: ${NAMESPACE}
-  roleRef:
-    kind: ClusterRole
-    name: openshift-oauth-delegate
-    apiGroup: rbac.authorization.k8s.io
 - apiVersion: apps/v1
   kind: Deployment
   metadata:
@@ -66,23 +37,25 @@ objects:
             name: http
             protocol: TCP
           readinessProbe:
-            failureThreshold: 3
-            periodSeconds: 10
-            successThreshold: 1
             httpGet:
               path: /oauth/healthz
               port: http
               scheme: HTTPS
+            initialDelaySeconds: 5
             timeoutSeconds: 1
+            failureThreshold: 3
+            periodSeconds: 10
+            successThreshold: 1
           livenessProbe:
-            failureThreshold: 3
-            periodSeconds: 10
-            successThreshold: 1
             httpGet:
               path: /oauth/healthz
               port: http
               scheme: HTTPS
+            initialDelaySeconds: 5
             timeoutSeconds: 1
+            failureThreshold: 3
+            periodSeconds: 10
+            successThreshold: 1
           resources:
             limits:
               cpu: 20m
@@ -109,6 +82,7 @@ objects:
               path: /healthcheck
               port: 8080
               scheme: HTTP
+            initialDelaySeconds: 5
             timeoutSeconds: 1
             failureThreshold: 3
             periodSeconds: 10
@@ -118,6 +92,7 @@ objects:
               path: /healthcheck
               port: 8080
               scheme: HTTP
+            initialDelaySeconds: 5
             timeoutSeconds: 1
             failureThreshold: 3
             periodSeconds: 10
@@ -139,13 +114,13 @@ objects:
           - name: SPLUNK_TOKEN
             valueFrom:
               secretKeyRef:
-                key: Token
-                name: ${SPLUNK_SECRET_NAME}
+                key: SPLUNK_TOKEN
+                name: ${GABI_INSTANCE}-splunk
           - name: SPLUNK_ENDPOINT
             valueFrom:
               secretKeyRef:
-                key: URL
-                name: ${SPLUNK_SECRET_NAME}
+                key: SPLUNK_ENDPOINT
+                name: ${GABI_INSTANCE}-splunk
           - name: DB_DRIVER
             value: ${DB_DRIVER}
           - name: DB_WRITE
@@ -192,6 +167,14 @@ objects:
           configMap:
             optional: true
             name: ${GABI_INSTANCE}
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    name: ${GABI_INSTANCE}-splunk
+  type: Opaque
+  stringData:
+    SPLUNK_TOKEN: ${SPLUNK_TOKEN}
+    SPLUNK_ENDPOINT: ${SPLUNK_ENDPOINT}
 - apiVersion: v1
   kind: Service
   metadata:
@@ -247,12 +230,14 @@ parameters:
   value: db-creds
 - name: HOST
   value: example.com
-- name: SPLUNK_INDEX
-  value: app-sre
 - name: POD_NAME
   value: gabi-staging
-- name: SPLUNK_SECRET_NAME
-  value: splunk-creds
+- name: SPLUNK_INDEX
+  value: app-sre
+- name: SPLUNK_TOKEN
+  required: true
+- name: SPLUNK_ENDPOINT
+  required: true
 - name: GABI_INSTANCE
   value: gabi-instance
 - name: USERS_FILE_PATH
