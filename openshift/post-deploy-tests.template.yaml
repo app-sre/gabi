@@ -1,0 +1,54 @@
+---
+apiVersion: v1
+kind: Template
+metadata:
+  name: gabi-post-deploy-tests
+objects:
+- apiVersion: v1
+  kind: ServiceAccount
+  metadata:
+    name: ${SERVICE_ACCOUNT}
+  imagePullSecrets:
+  - name: ${IMAGE_PULL_SECRET}
+- apiVersion: batch/v1
+  kind: Job
+  metadata:
+    name: gabi-post-deploy-tests-${IMAGE_TAG}
+  spec:
+    backoffLimit: 5
+    template:
+      spec:
+        restartPolicy: Never
+        serviceAccountName: ${SERVICE_ACCOUNT}
+        containers:
+          - image: ${IMAGE}:${IMAGE_TAG}
+            imagePullPolicy: Always
+            name: gabi-post-deploy-tests
+            command:
+              - /bin/curl
+            args:
+              - -s
+              - http://localhost:8080/healthcheck
+            resources:
+              requests:
+                memory: ${MEMORY_REQUESTS}
+                cpu: ${CPU_REQUESTS}
+              limits:
+                memory: ${MEMORY_LIMIT}
+                cpu: ${CPU_LIMIT}
+parameters:
+- name: IMAGE
+  value: quay.io/app-sre/gabi
+- name: IMAGE_TAG
+  value: ""
+  required: true
+- name: SERVICE_ACCOUNT
+  value: "gabi-post-deploy-tests"
+- name: MEMORY_REQUESTS
+  value: 128Mi
+- name: MEMORY_LIMIT
+  value: 128Mi
+- name: CPU_REQUESTS
+  value: 300m
+- name: CPU_LIMIT
+  value: 300m
