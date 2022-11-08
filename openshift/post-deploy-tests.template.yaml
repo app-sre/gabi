@@ -25,10 +25,7 @@ objects:
             imagePullPolicy: Always
             name: gabi-post-deploy-tests
             command:
-              - /bin/curl
-            args:
-              - -s
-              - http://localhost:8080/healthcheck
+              - /bin/date
             resources:
               requests:
                 memory: ${MEMORY_REQUESTS}
