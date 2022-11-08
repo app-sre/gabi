@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"go.uber.org/zap"
@@ -94,7 +94,7 @@ func (d *SplunkAudit) Write(s *SplunkQueryData) (SplunkResponse, error) {
 	}
    	defer resp.Body.Close()
 	
-   	body, err := ioutil.ReadAll(resp.Body)
+   	body, err := io.ReadAll(resp.Body)
    	if err != nil {
 		return  *splunkResp, err
    	}
