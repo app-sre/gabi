@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"log"
+	"net/http"
 	"time"
 
 	"github.com/etherlabsio/healthcheck/v2"
@@ -22,7 +22,7 @@ func Healthcheck(env *gabi.Env) http.Handler {
 					err := env.DB.PingContext(ctx)
 					if err != nil {
 						errStr := "failed to connect to database as part of healthcheck ping"
-						logErr := fmt.Errorf(errStr + ": %v", err)
+						logErr := fmt.Errorf(errStr+": %v", err)
 						log.Println(logErr)
 						return errors.New("failed to connect database... see gabi logs for further details")
 					}

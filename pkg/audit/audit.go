@@ -44,11 +44,11 @@ type SplunkEventData struct {
 
 type SplunkQueryData struct {
 	Event      *SplunkEventData `json:"event"`
-	Time       int64 `json:"time"`
-	Host       string `json:"host"`
-	Source     string `json:"source"`
-	Sourcetype string `json:"sourcetype"`
-	Index      string `json:"index"`
+	Time       int64            `json:"time"`
+	Host       string           `json:"host"`
+	Source     string           `json:"source"`
+	Sourcetype string           `json:"sourcetype"`
+	Index      string           `json:"index"`
 }
 
 type SplunkResponse struct {
@@ -83,26 +83,26 @@ func (d *SplunkAudit) Write(s *SplunkQueryData) (SplunkResponse, error) {
 
 	req, err := http.NewRequest("POST", d.Env.URL, responseBody)
 	if err != nil {
-    	return *splunkResp, err
+		return *splunkResp, err
 	}
-	req.Header.Add("Authorization", "Splunk " + d.Env.SPLUNK_TOKEN)
+	req.Header.Add("Authorization", "Splunk "+d.Env.SPLUNK_TOKEN)
 	req.Header.Add("Content-Type", "application/json")
 
 	resp, err := client.Do(req)
 	if err != nil {
 		return *splunkResp, err
 	}
-   	defer resp.Body.Close()
-	
-   	body, err := io.ReadAll(resp.Body)
-   	if err != nil {
-		return  *splunkResp, err
-   	}
-	
-	err = json.Unmarshal(body, splunkResp)
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return  *splunkResp, err
+		return *splunkResp, err
 	}
 
-   	return *splunkResp, nil
+	err = json.Unmarshal(body, splunkResp)
+	if err != nil {
+		return *splunkResp, err
+	}
+
+	return *splunkResp, nil
 }
