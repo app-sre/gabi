@@ -178,7 +178,19 @@ objects:
 - apiVersion: v1
   kind: Service
   metadata:
-    name: ${GABI_INSTANCE}
+    name: ${GABI_INSTANCE}-internal
+  spec:
+    clusterIP: None
+    ports:
+    - name: http
+      port: 8080
+      protocol: TCP
+    selector:
+      app: ${GABI_INSTANCE}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: ${GABI_INSTANCE}-external
     annotations:
       service.alpha.openshift.io/serving-cert-secret-name: ${GABI_INSTANCE}-tls
   spec:
@@ -204,7 +216,7 @@ objects:
       targetPort: http
     to:
       kind: Service
-      name: ${GABI_INSTANCE}
+      name: ${GABI_INSTANCE}-external
       weight: 100
     tls:
       termination: reencrypt
