@@ -22,10 +22,13 @@ objects:
         serviceAccountName: ${SERVICE_ACCOUNT}
         containers:
           - image: ${IMAGE}:${IMAGE_TAG}
-            imagePullPolicy: Always
+            imagePullPolicy: IfNotPresent
             name: gabi-post-deploy-tests
             command:
               - /bin/date
+            env:
+            - name: HOST
+              value: ${GABI_INSTANCE}-internal.${NAMESPACE}.svc.cluster.local
             resources:
               requests:
                 memory: ${MEMORY_REQUESTS}
@@ -34,6 +37,10 @@ objects:
                 memory: ${MEMORY_LIMIT}
                 cpu: ${CPU_LIMIT}
 parameters:
+- name: NAMESPACE
+  value: gabi
+- name: GABI_INSTANCE
+  value: gabi-instance
 - name: IMAGE
   value: quay.io/app-sre/gabi
 - name: IMAGE_TAG
