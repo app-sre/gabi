@@ -1,0 +1,41 @@
+version: '3.1'
+
+services:
+  postgres:
+    image: postgres
+    restart: always
+    cap_add:
+      - SYS_NICE
+    environment:
+      # POSTGRES_USER:
+      POSTGRES_PASSWORD: test123
+      # POSTGRES_DB:
+    ports:
+      - 5432:5432
+    volumes:
+      - postgres:/var/lib/postgresql/data
+
+  mysql:
+    image: mysql
+    restart: always
+    cap_add:
+      - SYS_NICE
+    environment:
+      MYSQL_ROOT_PASSWORD: test123
+    ports:
+      - 3306:3306
+    volumes:
+      - mysql:/var/lib/mysql
+
+  adminer:
+    image: adminer
+    command: php -S 0.0.0.0:8080 -t /var/www/html
+    restart: always
+    ports:
+      - 8080:8080
+    depends_on:
+      - postgres
+
+volumes:
+  postgres:
+  mysql:
