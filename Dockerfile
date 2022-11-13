@@ -1,4 +1,4 @@
-FROM quay.io/app-sre/golang:1.16 as builder
+FROM quay.io/app-sre/golang:1.18 as builder
 WORKDIR /build
 COPY . .
 RUN make clean linux
