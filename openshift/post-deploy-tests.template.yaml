@@ -25,7 +25,12 @@ objects:
             imagePullPolicy: IfNotPresent
             name: gabi-post-deploy-tests
             command:
-              - /bin/date
+              - /bin/curl
+            args:
+              - --silent
+              - --show-error
+              - --fail
+              - http://$(HOST):8080/healthcheck
             env:
             - name: HOST
               value: ${GABI_INSTANCE}-internal.${NAMESPACE}.svc.cluster.local
