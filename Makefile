@@ -1,4 +1,4 @@
-.PHONY: build linux clean
+.PHONY: build linux clean test
 
 all: build
 
@@ -10,6 +10,9 @@ linux:
 
 clean:
 	rm -f gabi
+
+test:
+	go test -count=1 -v -timeout 300s ./...
 
 docker-build:
 	$(BUILD_CMD) -t ${IMG} -f Dockerfile .
