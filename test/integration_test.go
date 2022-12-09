@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -104,7 +103,7 @@ func TestHealthCheckOkay(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		panic(err)
 	}
@@ -131,7 +130,7 @@ func TestHealthCheckFail(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		panic(err)
 	}
@@ -187,7 +186,7 @@ func TestWithSplunkWrite(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		panic(err)
 	}
@@ -217,12 +216,12 @@ func mustCreateUserTestFile() string {
 	if err != nil {
 		panic(err)
 	}
-	file, err := ioutil.TempFile(wd, "user")
+	file, err := os.CreateTemp(wd, "user")
 	if err != nil {
 		panic(err)
 	}
 
-	err = ioutil.WriteFile(file.Name(), []byte(`test`), os.ModeAppend)
+	err = os.WriteFile(file.Name(), []byte(`test`), os.ModeAppend)
 	if err != nil {
 		panic(err)
 	}
