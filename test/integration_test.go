@@ -108,7 +108,7 @@ func TestHealthCheckOkay(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	assert.Contains(t, string(body), "{\"status\":\"OK\"}")
+	assert.Contains(t, string(body), `{"status":"OK"}`)
 }
 
 func TestHealthCheckFail(t *testing.T) {
@@ -135,7 +135,7 @@ func TestHealthCheckFail(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	assert.Contains(t, string(body), "{\"status\":\"Service Unavailable\",\"errors\":{\"database\":\"failed to connect database.")
+	assert.Contains(t, string(body), `{"status":"Service Unavailable","errors":{"database":"Unable to connect to the database"}}`)
 }
 
 func TestWithSplunkWrite(t *testing.T) {
@@ -191,7 +191,7 @@ func TestWithSplunkWrite(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	assert.Contains(t, string(body), "{\"result\":[[\"?column?\"],[\"1\"]],\"error\":\"\"}")
+	assert.Contains(t, string(body), `{"result":[["?column?"],["1"]],"error":""}`)
 }
 
 func setEnv(userfile, dbHost, dbPort, splunkToken, splunkEndpoint string) {

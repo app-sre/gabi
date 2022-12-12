@@ -107,6 +107,8 @@ objects:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.name
+          - name: ENVIRONMENT
+            value: ${ENVIRONMENT}
           - name: NAMESPACE
             value: ${NAMESPACE}
           - name: SPLUNK_INDEX
@@ -222,6 +224,8 @@ objects:
       termination: reencrypt
       insecureEdgeTerminationPolicy: Redirect
 parameters:
+- name: ENVIRONMENT
+  value: development
 - name: NAMESPACE
   value: gabi
 - name: IMAGE_TAG

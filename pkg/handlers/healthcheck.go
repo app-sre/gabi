@@ -3,8 +3,6 @@ package handlers
 import (
 	"context"
 	"errors"
-	"fmt"
-	"log"
 	"net/http"
 	"time"
 
@@ -21,10 +19,9 @@ func Healthcheck(env *gabi.Env) http.Handler {
 				func(ctx context.Context) error {
 					err := env.DB.PingContext(ctx)
 					if err != nil {
-						errStr := "failed to connect to database as part of healthcheck ping"
-						logErr := fmt.Errorf(errStr+": %v", err)
-						log.Println(logErr)
-						return errors.New("failed to connect database... see gabi logs for further details")
+						l := "Unable to connect to the database"
+						env.Logger.Errorf("%s: %s", l, err)
+						return errors.New(l)
 					}
 					return nil // healthcheck passed successfully
 				},
