@@ -2,8 +2,10 @@ package cmd
 
 import (
 	"database/sql"
+	"io"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -59,20 +61,23 @@ func Run(logger *zap.SugaredLogger) {
 
 	env := &gabi.Env{DB: db, DB_WRITE: dbe.DB_WRITE, Logger: logger, Audit: a, SplunkAudit: *s, Users: usere.Users}
 
+	// Temp workaround for easy to access io.Writer.
+	defaultLogOutput := log.Default().Writer()
+
+	healthLogOutput := io.Discard
+	if os.Getenv("ENVIRONMENT") != "production" {
+		healthLogOutput = defaultLogOutput
+	}
+
 	r := mux.NewRouter()
 
-	r.Handle("/healthcheck", handlers.Healthcheck(env))
-	r.HandleFunc("/query", handlers.Query(env))
+	r.Handle("/healthcheck", gorillaHandlers.LoggingHandler(healthLogOutput, handlers.Healthcheck(env)))
+	r.Handle("/query", gorillaHandlers.LoggingHandler(defaultLogOutput, handlers.Query(env)))
 
 	logger.Info("Router initialized.")
 
 	servePort := 8080
 	logger.Infof("HTTP server starting on port %d.", servePort)
 
-	// Temp workaround for easy to access io.Writer
-	httpLogger := log.Default()
-	http.ListenAndServe(
-		":"+strconv.Itoa(servePort),
-		gorillaHandlers.LoggingHandler(httpLogger.Writer(), r),
-	)
+	http.ListenAndServe(":"+strconv.Itoa(servePort), r)
 }
