@@ -6,53 +6,55 @@ import (
 	"github.com/app-sre/gabi/pkg/env"
 )
 
-type Splunkenv struct {
-	SPLUNK_INDEX    string
-	SPLUNK_TOKEN    string
-	SPLUNK_ENDPOINT string
-	URL             string
-	NAMESPACE       string
-	POD             string
-	SOURCE          string
-	SOURCETYPE      string
-	HOST            string
+type SplunkEnv struct {
+	Index     string
+	Endpoint  string
+	Token     string
+	Host      string
+	Namespace string
+	Pod       string
 }
 
-func (se *Splunkenv) Populate() error {
-	index, found := os.LookupEnv("SPLUNK_INDEX")
-	if !(found) {
-		return &env.EnvError{Env: "SPLUNK_INDEX"}
-	}
-	token, found := os.LookupEnv("SPLUNK_TOKEN")
-	if !(found) {
-		return &env.EnvError{Env: "SPLUNK_TOKEN"}
-	}
-	endpoint, found := os.LookupEnv("SPLUNK_ENDPOINT")
-	if !(found) {
-		return &env.EnvError{Env: "SPLUNK_ENDPOINT"}
-	}
-	namespace, found := os.LookupEnv("NAMESPACE")
-	if !(found) {
-		return &env.EnvError{Env: "NAMESPACE"}
-	}
-	pod, found := os.LookupEnv("POD_NAME")
-	if !(found) {
-		return &env.EnvError{Env: "POD_NAME"}
-	}
-	host, found := os.LookupEnv("HOST")
-	if !(found) {
-		return &env.EnvError{Env: "HOST"}
-	}
+func NewSplunkEnv() *SplunkEnv {
+	return &SplunkEnv{}
+}
 
-	se.SPLUNK_INDEX = index
-	se.SPLUNK_TOKEN = token
-	se.SPLUNK_ENDPOINT = endpoint
-	se.URL = endpoint + "/services/collector/event"
-	se.NAMESPACE = namespace
-	se.POD = pod
-	se.SOURCE = "gabi"
-	se.SOURCETYPE = "json"
-	se.HOST = host
+func (s *SplunkEnv) Populate() error {
+	index := os.Getenv("SPLUNK_INDEX")
+	if index == "" {
+		return &env.EnvError{Name: "SPLUNK_INDEX"}
+	}
+	s.Index = index
+
+	endpoint := os.Getenv("SPLUNK_ENDPOINT")
+	if endpoint == "" {
+		return &env.EnvError{Name: "SPLUNK_ENDPOINT"}
+	}
+	s.Endpoint = endpoint
+
+	token := os.Getenv("SPLUNK_TOKEN")
+	if token == "" {
+		return &env.EnvError{Name: "SPLUNK_TOKEN"}
+	}
+	s.Token = token
+
+	host := os.Getenv("HOST")
+	if host == "" {
+		return &env.EnvError{Name: "HOST"}
+	}
+	s.Host = host
+
+	namespace := os.Getenv("NAMESPACE")
+	if namespace == "" {
+		return &env.EnvError{Name: "NAMESPACE"}
+	}
+	s.Namespace = namespace
+
+	pod := os.Getenv("POD_NAME")
+	if pod == "" {
+		return &env.EnvError{Name: "POD_NAME"}
+	}
+	s.Pod = pod
 
 	return nil
 }

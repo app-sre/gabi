@@ -1,247 +1,587 @@
+//go:build integration
+// +build integration
+
 package test
 
 import (
 	"bytes"
-	"crypto/tls"
-	"encoding/json"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"os"
-	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
+	"github.com/app-sre/gabi/internal/test"
 	"github.com/app-sre/gabi/pkg/cmd"
-	"github.com/orlangure/gnomock"
-	"github.com/orlangure/gnomock/preset/postgres"
-	"github.com/orlangure/gnomock/preset/splunk"
+	"github.com/app-sre/gabi/pkg/env/user"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 )
 
-type splunkTokenResponse struct {
-	Entry []struct {
-		Content struct {
-			Token string `json:"token"`
-		} `json:"content"`
-	} `json:"entry"`
-}
-
-func insecureHttpClient() http.Client {
-	client := http.Client{}
-	transport := &http.Transport{}
-	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-	client.Transport = transport
-
-	return client
-}
-
-func createIngestToken(client http.Client, host, port, password string) splunkTokenResponse {
-	api := fmt.Sprintf("https://%s:%s/servicesNS/admin/splunk_httpinput/data/inputs/http?output_mode=json", host, port)
-	body := []byte(`name=mytokexna`)
-
-	req, err := http.NewRequest("POST", api, bytes.NewBuffer(body))
-	if err != nil {
-		panic(err)
-	}
-	req.SetBasicAuth("admin", password)
-
-	resp, err := client.Do(req)
-	if err != nil {
-		panic(err)
-	}
-	defer resp.Body.Close()
-
-	var token splunkTokenResponse
-	resp_body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		panic(err)
-	}
-	err = json.Unmarshal(resp_body, &token)
-	if err != nil {
-		panic(err)
-	}
-	return token
-}
-
-func startPostgres(t *testing.T) *gnomock.Container {
-	p := postgres.Preset(
-		postgres.WithUser("gnomock", "gnomick"),
-		postgres.WithDatabase("mydb"),
-	)
-	options := p.Options()
-	options = append(options, gnomock.WithRegistryAuth(os.Getenv("QUAY_TOKEN")))
-	options = append(options, gnomock.WithUseLocalImagesFirst())
-	psql, err := gnomock.StartCustom("quay.io/app-sre/postgres:12.5", p.Ports(),
-		options...,
-	)
-	assert.NoError(t, err)
-	t.Cleanup(func() { _ = gnomock.Stop(psql) })
-	return psql
-}
-
-func TestHealthCheckOkay(t *testing.T) {
-	userfile := mustCreateUserTestFile()
-	defer os.Remove(userfile)
-
+func TestHealthCheckOK(t *testing.T) {
 	psql := startPostgres(t)
-	setEnv(userfile, psql.Host, fmt.Sprint(psql.DefaultPort()), "", "localhost")
 
-	logger, _ := zap.NewDevelopment()
+	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
+	defer os.Remove(configFile)
+
+	setEnvironment(configFile, psql.Host, strconv.Itoa(psql.DefaultPort()), "false", "test123", "localhost")
+	defer os.Clearenv()
+
+	logger := test.DummyLogger(io.Discard)
 	defer logger.Sync()
 
-	loggerS := logger.Sugar()
-
-	go cmd.Run(loggerS)
-	waitForGabi()
+	go func() {
+		err := cmd.Run(logger.Sugar())
+		assert.Nil(t, err)
+	}()
+	waitForPortOpen(8080)
 
 	resp, err := http.Get("http://localhost:8080/healthcheck")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Contains(t, string(body), `{"status":"OK"}`)
 }
 
-func TestHealthCheckFail(t *testing.T) {
-	userfile := mustCreateUserTestFile()
-	defer os.Remove(userfile)
+func TestHealthCheckFailure(t *testing.T) {
+	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
+	defer os.Remove(configFile)
 
-	setEnv(userfile, "localhost", "1123", "", "localhost")
+	setEnvironment(configFile, "localhost", "1123", "false", "test123", "localhost")
+	defer os.Clearenv()
 
-	logger, _ := zap.NewDevelopment()
+	logger := test.DummyLogger(io.Discard)
 	defer logger.Sync()
 
-	loggerS := logger.Sugar()
-
-	go cmd.Run(loggerS)
-	waitForGabi()
+	go func() {
+		err := cmd.Run(logger.Sugar())
+		assert.Nil(t, err)
+	}()
+	waitForPortOpen(8080)
 
 	resp, err := http.Get("http://localhost:8080/healthcheck")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
+
+	assert.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
 	assert.Contains(t, string(body), `{"status":"Service Unavailable","errors":{"database":"Unable to connect to the database"}}`)
 }
 
-func TestWithSplunkWrite(t *testing.T) {
-	client := insecureHttpClient()
-	splunk_password := "foobarPassword123!"
+func TestQueryWithMissingHeader(t *testing.T) {
+	client := dummyHTTPClient()
 
 	psql := startPostgres(t)
 
-	s := splunk.Preset(
-		splunk.WithVersion("latest"),
-		splunk.WithLicense(true),
-		splunk.WithPassword(splunk_password),
-	)
+	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
+	defer os.Remove(configFile)
 
-	options := s.Options()
-	options = append(options, gnomock.WithRegistryAuth(os.Getenv("QUAY_TOKEN")))
-	options = append(options, gnomock.WithUseLocalImagesFirst())
-	splunk, err := gnomock.StartCustom("quay.io/app-sre/splunk:latest", s.Ports(),
-		options...,
-	)
-	assert.NoError(t, err)
-	t.Cleanup(func() { _ = gnomock.Stop(splunk) })
+	setEnvironment(configFile, psql.Host, strconv.Itoa(psql.DefaultPort()), "false", "test123", "localhost")
+	defer os.Clearenv()
 
-	token := createIngestToken(client, "localhost", fmt.Sprint(splunk.Port("api")), "foobarPassword123!")
-
-	userfile := mustCreateUserTestFile()
-	defer os.Remove(userfile)
-
-	setEnv(userfile, psql.Host, fmt.Sprint(psql.DefaultPort()), token.Entry[0].Content.Token, fmt.Sprintf("https://%s:%s", "localhost", fmt.Sprint(splunk.Port("collector"))))
-
-	logger, _ := zap.NewDevelopment()
+	logger := test.DummyLogger(io.Discard)
 	defer logger.Sync()
 
-	loggerS := logger.Sugar()
+	go func() {
+		err := cmd.Run(logger.Sugar())
+		assert.Nil(t, err)
+	}()
+	waitForPortOpen(8080)
 
-	go cmd.Run(loggerS)
-	waitForGabi()
-
-	req, err := http.NewRequest("POST", "http://localhost:8080/query", bytes.NewBuffer([]byte(`{"query":"select 1"}`)))
+	req, err := http.NewRequest("POST", "http://localhost:8080/query", bytes.NewBuffer([]byte(`{}`)))
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
-	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	assert.Contains(t, string(body), `Request without required header: X-Forwarded-User`)
+}
+
+func TestQueryWithMissingBody(t *testing.T) {
+	client := dummyHTTPClient()
+
+	psql := startPostgres(t)
+
+	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
+	defer os.Remove(configFile)
+
+	setEnvironment(configFile, psql.Host, strconv.Itoa(psql.DefaultPort()), "false", "test123", "localhost")
+	defer os.Clearenv()
+
+	logger := test.DummyLogger(io.Discard)
+	defer logger.Sync()
+
+	go func() {
+		err := cmd.Run(logger.Sugar())
+		assert.Nil(t, err)
+	}()
+	waitForPortOpen(8080)
+
+	req, err := http.NewRequest("POST", "http://localhost:8080/query", &bytes.Buffer{})
+	if err != nil {
+		t.Fatal(err)
+	}
 	req.Header.Set("X-Forwarded-User", "test")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
+
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	assert.Contains(t, string(body), `Request body cannot be empty`)
+}
+
+func TestQueryWithExpiredInstance(t *testing.T) {
+	client := dummyHTTPClient()
+
+	psql := startPostgres(t)
+
+	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, -1), []string{"test"})
+	defer os.Remove(configFile)
+
+	setEnvironment(configFile, psql.Host, strconv.Itoa(psql.DefaultPort()), "false", "test123", "localhost")
+	defer os.Clearenv()
+
+	var output bytes.Buffer
+
+	logger := test.DummyLogger(&output)
+	defer logger.Sync()
+
+	go func() {
+		err := cmd.Run(logger.Sugar())
+		assert.Nil(t, err)
+	}()
+	waitForPortOpen(8080)
+
+	req, err := http.NewRequest("POST", "http://localhost:8080/query", bytes.NewBuffer([]byte(`{}`)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("X-Forwarded-User", "test")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Contains(t, output.String(), `expired: true`)
+	assert.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
+	assert.Contains(t, string(body), `The service instance has expired`)
+}
+
+func TestQueryWithUnauthorizedAccess(t *testing.T) {
+	client := dummyHTTPClient()
+
+	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{})
+	defer os.Remove(configFile)
+
+	psql := startPostgres(t)
+	setEnvironment(configFile, psql.Host, strconv.Itoa(psql.DefaultPort()), "false", "test123", "localhost")
+	defer os.Clearenv()
+
+	logger := test.DummyLogger(io.Discard)
+	defer logger.Sync()
+
+	go func() {
+		err := cmd.Run(logger.Sugar())
+		assert.Nil(t, err)
+	}()
+	waitForPortOpen(8080)
+
+	req, err := http.NewRequest("POST", "http://localhost:8080/query", bytes.NewBuffer([]byte(`{}`)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("X-Forwarded-User", "test")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+	assert.Contains(t, string(body), `Request cannot be authorized`)
+}
+
+func TestQueryWithForbiddenUserAccess(t *testing.T) {
+	client := dummyHTTPClient()
+
+	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
+	defer os.Remove(configFile)
+
+	psql := startPostgres(t)
+	setEnvironment(configFile, psql.Host, strconv.Itoa(psql.DefaultPort()), "false", "test123", "localhost")
+	defer os.Clearenv()
+
+	logger := test.DummyLogger(io.Discard)
+	defer logger.Sync()
+
+	go func() {
+		err := cmd.Run(logger.Sugar())
+		assert.Nil(t, err)
+	}()
+	waitForPortOpen(8080)
+
+	req, err := http.NewRequest("POST", "http://localhost:8080/query", bytes.NewBuffer([]byte(`{}`)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("X-Forwarded-User", "user-without-access-permissions")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+	assert.Contains(t, string(body), `User does not have required permissions`)
+}
+
+func TestQueryWithAccessUsingEnvironment(t *testing.T) {
+	client := dummyHTTPClient()
+
+	psql := startPostgres(t)
+
+	os.Setenv("EXPIRATION_DATE", time.Now().AddDate(0, 0, 1).Format(user.ExpiryDateLayout))
+	os.Setenv("AUTHORIZED_USERS", "test")
+
+	setEnvironment("", psql.Host, strconv.Itoa(psql.DefaultPort()), "false", "test123", "localhost")
+	defer os.Clearenv()
+
+	var output bytes.Buffer
+
+	logger := test.DummyLogger(&output)
+	defer logger.Sync()
+
+	go func() {
+		err := cmd.Run(logger.Sugar())
+		assert.Nil(t, err)
+	}()
+	waitForPortOpen(8080)
+
+	req, err := http.NewRequest("POST", "http://localhost:8080/query", &bytes.Buffer{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("X-Forwarded-User", "test")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	assert.Contains(t, output.String(), `Authorized users: [test]`)
+}
+
+func TestQueryWithAccessUsingDeprecatedUsersFile(t *testing.T) {
+	client := dummyHTTPClient()
+
+	psql := startPostgres(t)
+
+	file, err := os.CreateTemp("", "user-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(file.Name())
+
+	_, err = file.WriteString(`test`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	os.Setenv("USERS_FILE_PATH", file.Name())
+	setEnvironment("", psql.Host, strconv.Itoa(psql.DefaultPort()), "false", "test123", "localhost")
+	defer os.Clearenv()
+
+	var output bytes.Buffer
+
+	logger := test.DummyLogger(&output)
+	defer logger.Sync()
+
+	go func() {
+		err := cmd.Run(logger.Sugar())
+		assert.Nil(t, err)
+	}()
+	waitForPortOpen(8080)
+
+	req, err := http.NewRequest("POST", "http://localhost:8080/query", &bytes.Buffer{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("X-Forwarded-User", "test")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	assert.Contains(t, output.String(), `(expiration date: UNKNOWN)`)
+	assert.Contains(t, output.String(), `Authorized users: [test]`)
+}
+
+func TestQueryWithSplunkWrite(t *testing.T) {
+	client := dummyHTTPClient()
+	splunkPassword := "foobarPassword123!"
+
+	psql := startPostgres(t)
+	splunk := startSplunk(t, splunkPassword)
+
+	token := createSplunkIngestToken(t, client, "localhost", strconv.Itoa(splunk.Port("api")), splunkPassword)
+
+	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
+	defer os.Remove(configFile)
+
+	setEnvironment(
+		configFile,
+		psql.Host,
+		strconv.Itoa(psql.DefaultPort()),
+		"false",
+		token,
+		fmt.Sprintf("https://%s:%d", "localhost", splunk.Port("collector")),
+	)
+	defer os.Clearenv()
+
+	logger := test.DummyLogger(io.Discard)
+	defer logger.Sync()
+
+	go func() {
+		err := cmd.Run(logger.Sugar())
+		assert.Nil(t, err)
+	}()
+	waitForPortOpen(8080)
+
+	req, err := http.NewRequest("POST", "http://localhost:8080/query", bytes.NewBuffer([]byte(`{"query":"select 1;"}`)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("X-Forwarded-User", "test")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Contains(t, string(body), `{"result":[["?column?"],["1"]],"error":""}`)
 }
 
-func setEnv(userfile, dbHost, dbPort, splunkToken, splunkEndpoint string) {
-	os.Setenv("DB_DRIVER", "pgx")
-	os.Setenv("DB_HOST", dbHost)
-	os.Setenv("DB_PORT", dbPort)
-	os.Setenv("DB_USER", "gnomock")
-	os.Setenv("DB_PASS", "gnomick")
-	os.Setenv("DB_NAME", "mydb")
-	os.Setenv("DB_WRITE", "false")
+func TestQueryWithSplunkWriteFailure(t *testing.T) {
+	client := dummyHTTPClient()
+	splunkPassword := "foobarPassword123!"
 
-	os.Setenv("SPLUNK_INDEX", "main")
-	os.Setenv("SPLUNK_TOKEN", splunkToken)
-	os.Setenv("SPLUNK_ENDPOINT", splunkEndpoint)
-	os.Setenv("NAMESPACE", "a")
-	os.Setenv("POD_NAME", "a")
-	os.Setenv("HOST", "a")
-	os.Setenv("USERS_FILE_PATH", userfile)
+	splunk := startSplunk(t, splunkPassword)
+
+	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
+	defer os.Remove(configFile)
+
+	setEnvironment(
+		configFile,
+		"test",
+		"1234",
+		"false",
+		"test",
+		fmt.Sprintf("https://%s:%d", "localhost", splunk.Port("collector")),
+	)
+	defer os.Clearenv()
+
+	var output bytes.Buffer
+
+	logger := test.DummyLogger(&output)
+	defer logger.Sync()
+
+	go func() {
+		err := cmd.Run(logger.Sugar())
+		assert.Nil(t, err)
+	}()
+	waitForPortOpen(8080)
+
+	req, err := http.NewRequest("POST", "http://localhost:8080/query", bytes.NewBuffer([]byte(`{"query":"select 1;"}`)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("X-Forwarded-User", "test")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Contains(t, output.String(), `Unable to send audit to Splunk`)
+	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	assert.Contains(t, string(body), `An internal error has occurred`)
 }
 
-func mustCreateUserTestFile() string {
-	wd, err := os.Getwd()
+func TestQueryWithDatabaseWriteAccess(t *testing.T) {
+	client := dummyHTTPClient()
+	splunkPassword := "foobarPassword123!"
+
+	psql := startPostgres(t)
+	splunk := startSplunk(t, splunkPassword)
+
+	token := createSplunkIngestToken(t, client, "localhost", strconv.Itoa(splunk.Port("api")), splunkPassword)
+
+	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
+	defer os.Remove(configFile)
+
+	setEnvironment(
+		configFile,
+		psql.Host,
+		strconv.Itoa(psql.DefaultPort()),
+		"true",
+		token,
+		fmt.Sprintf("https://%s:%d", "localhost", splunk.Port("collector")),
+	)
+	defer os.Clearenv()
+
+	var output bytes.Buffer
+
+	logger := test.DummyLogger(&output)
+	defer logger.Sync()
+
+	go func() {
+		err := cmd.Run(logger.Sugar())
+		assert.Nil(t, err)
+	}()
+	waitForPortOpen(8080)
+
+	req, err := http.NewRequest("POST", "http://localhost:8080/query", bytes.NewBuffer([]byte(`{"query":"create table test(test text);"}`)))
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
-	file, err := os.CreateTemp(wd, "user")
+	req.Header.Set("X-Forwarded-User", "test")
+
+	resp, err := client.Do(req)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	err = os.WriteFile(file.Name(), []byte(`test`), os.ModeAppend)
-	if err != nil {
-		panic(err)
-	}
-
-	path, err := filepath.Abs(file.Name())
-	if err != nil {
-		panic(err)
-	}
-
-	return path
+	assert.Contains(t, output.String(), `write access: true`)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Contains(t, string(body), `[null]`)
 }
 
-func waitForGabi() {
-	for {
-		server, _ := net.ResolveTCPAddr("tcp", "localhost:8080")
-		client, _ := net.ResolveTCPAddr("tcp", ":")
-		_, err := net.DialTCP("tcp", client, server)
-		if err == nil {
-			break
-		}
-		time.Sleep(100 * time.Millisecond)
+func TestQueryWithDatabaseWriteAccessFailure(t *testing.T) {
+	client := dummyHTTPClient()
+	splunkPassword := "foobarPassword123!"
+
+	psql := startPostgres(t)
+	splunk := startSplunk(t, splunkPassword)
+
+	token := createSplunkIngestToken(t, client, "localhost", strconv.Itoa(splunk.Port("api")), splunkPassword)
+
+	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
+	defer os.Remove(configFile)
+
+	setEnvironment(
+		configFile,
+		psql.Host,
+		strconv.Itoa(psql.DefaultPort()),
+		"false",
+		token,
+		fmt.Sprintf("https://%s:%d", "localhost", splunk.Port("collector")),
+	)
+	defer os.Clearenv()
+
+	var output bytes.Buffer
+
+	logger := test.DummyLogger(&output)
+	defer logger.Sync()
+
+	go func() {
+		err := cmd.Run(logger.Sugar())
+		assert.Nil(t, err)
+	}()
+	waitForPortOpen(8080)
+
+	req, err := http.NewRequest("POST", "http://localhost:8080/query", bytes.NewBuffer([]byte(`{"query":"drop table test"}`)))
+	if err != nil {
+		t.Fatal(err)
 	}
+	req.Header.Set("X-Forwarded-User", "test")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Contains(t, output.String(), `Unable to query database`)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	assert.Contains(t, string(body), `cannot execute DROP TABLE in a read-only transaction`)
 }

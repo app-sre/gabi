@@ -18,3 +18,5 @@ __debug_*
 *.out
 
 test/user*
+
+gabi

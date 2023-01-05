@@ -1,12 +1,20 @@
-#!/bin/bash
-set -exv
+#!/usr/bin/env bash
 
-BASE_IMG="gabi"
+set -o errexit
+set -o nounset
+set -o pipefail
 
-IMG="${BASE_IMG}:check"
+export PATH="/opt/go/1.19.5/bin:${PATH}"
 
-docker login quay.io -u ${QUAY_USER} -p ${QUAY_TOKEN}
+readonly BASE_IMG="gabi"
 
-./integ.sh
+{
+    set +x
+    docker login quay.io -u "${QUAY_USER}" -p "${QUAY_TOKEN}"
+}
 
-BUILD_CMD="docker build" IMG="$IMG" make docker-build
+go test ./...
+
+./integration.sh
+
+BUILD_CMD="docker build" IMG="${BASE_IMG}:check" make docker-build

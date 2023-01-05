@@ -23,7 +23,7 @@ func Healthcheck(env *gabi.Env) http.Handler {
 						env.Logger.Errorf("%s: %s", l, err)
 						return errors.New(l)
 					}
-					return nil // healthcheck passed successfully
+					return nil
 				},
 			),
 		),

@@ -4,16 +4,16 @@ import (
 	"database/sql"
 
 	"github.com/app-sre/gabi/pkg/audit"
+	"github.com/app-sre/gabi/pkg/env/db"
+	"github.com/app-sre/gabi/pkg/env/user"
 	"go.uber.org/zap"
 )
 
-const Version = "0.0.1"
-
 type Env struct {
 	DB          *sql.DB
-	DB_WRITE    bool
+	DBEnv       *db.DBEnv
+	UserEnv     *user.UserEnv
+	LoggerAudit *audit.LoggerAudit
+	SplunkAudit *audit.SplunkAudit
 	Logger      *zap.SugaredLogger
-	Audit       audit.Audit
-	SplunkAudit audit.SplunkAudit
-	Users       []string
 }
