@@ -86,6 +86,9 @@ func (u *UserEnv) IsDeprecated() bool {
 }
 
 func (u *UserEnv) IsExpired() bool {
+	if u.IsDeprecated() {
+		return len(u.Users) == 0
+	}
 	return u.Expiration.Before(time.Now())
 }
 
