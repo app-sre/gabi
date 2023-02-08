@@ -372,6 +372,54 @@ func TestQueryWithAccessUsingDeprecatedUsersFile(t *testing.T) {
 	assert.Contains(t, output.String(), `Authorized users: [test]`)
 }
 
+func TestQueryWithAccessFailureUsingDeprecatedUsersFile(t *testing.T) {
+	client := dummyHTTPClient()
+
+	psql := startPostgres(t)
+
+	file, err := os.CreateTemp("", "user-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(file.Name())
+
+	os.Setenv("USERS_FILE_PATH", file.Name())
+	setEnvironment("", psql.Host, strconv.Itoa(psql.DefaultPort()), "false", "test123", "localhost")
+	defer os.Clearenv()
+
+	var output bytes.Buffer
+
+	logger := test.DummyLogger(&output)
+	defer logger.Sync()
+
+	go func() {
+		err := cmd.Run(logger.Sugar())
+		assert.Nil(t, err)
+	}()
+	waitForPortOpen(8080)
+
+	req, err := http.NewRequest("POST", "http://localhost:8080/query", &bytes.Buffer{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("X-Forwarded-User", "test")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Contains(t, output.String(), `expired: true`)
+	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+	assert.Contains(t, string(body), `Request cannot be authorized`)
+}
+
 func TestQueryWithSplunkWrite(t *testing.T) {
 	client := dummyHTTPClient()
 	splunkPassword := "foobarPassword123!"
