@@ -4,110 +4,68 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
+	"net/url"
+	"os"
 	"reflect"
-	"strconv"
-	"time"
 
 	gabi "github.com/app-sre/gabi/pkg"
-	"github.com/app-sre/gabi/pkg/audit"
+	"github.com/app-sre/gabi/pkg/models"
 )
-
-type QueryRequest struct {
-	Query string
-}
-
-type QueryResponse struct {
-	Result [][]string `json:"result"`
-	Error  string     `json:"error"`
-}
-
-func stringInSlice(a string, list []string) bool {
-	for _, b := range list {
-		if b == a {
-			return true
-		}
-	}
-	return false
-}
 
 func Query(env *gabi.Env) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		var request models.QueryRequest
 
-		var q QueryRequest
-		var ret QueryResponse
-
-		err := json.NewDecoder(r.Body).Decode(&q)
+		err := json.NewDecoder(r.Body).Decode(&request)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			env.Logger.Errorf("Unable to decode request body: %s", err)
+			if err == io.EOF {
+				http.Error(w, "Request body cannot be empty", http.StatusBadRequest)
+				return
+			}
+			_ = queryErrorResponse(w, err)
 			return
 		}
 
-		now := time.Now()
-		user := r.Header.Get("X-Forwarded-User")
-		if user == "" || !stringInSlice(user, env.Users) {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-		qd := &audit.QueryData{
-			Query:     q.Query,
-			User:      user,
-			Timestamp: now.Unix(),
-		}
-
-		env.Audit.Write(qd)
-
-		sed := &audit.SplunkEventData{
-			Query: q.Query,
-			User:  user,
-		}
-
-		sqd := &audit.SplunkQueryData{
-			Event: sed,
-			Time:  now.Unix(),
-		}
-
-		resp, err := env.SplunkAudit.Write(sqd)
+		tx, err := env.DB.BeginTx(context.Background(), &sql.TxOptions{
+			ReadOnly: !env.DBEnv.AllowWrite,
+		})
 		if err != nil {
-			ret.Error = err.Error()
-			json.NewEncoder(w).Encode(ret)
-			return
-		} else if resp.Code != 0 {
-			ret.Error = "Splunk error: " + resp.Text + " - Code: " + strconv.Itoa(resp.Code)
-			json.NewEncoder(w).Encode(ret)
+			env.Logger.Errorf("Unable to start database transaction: %s", err)
+			_ = queryErrorResponse(w, err)
 			return
 		}
+		defer func() { _ = tx.Rollback() }()
 
-		ctx := context.Background()
-		txo := sql.TxOptions{ReadOnly: !env.DB_WRITE}
-		tx, err := env.DB.BeginTx(ctx, &txo)
+		rows, err := tx.Query(request.Query)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			env.Logger.Errorf("Unable to query database: %s", err)
+			_ = queryErrorResponse(w, err)
 			return
 		}
-		rows, err := tx.Query(q.Query)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 
 		cols, err := rows.Columns() // Remember to check err afterwards
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			env.Logger.Errorf("Unable to process database query: %s", err)
+			_ = queryErrorResponse(w, err)
 			return
 		}
 
 		vals := make([]interface{}, len(cols))
 
-		var result [][]string
-		var keys []string
+		var (
+			result [][]string
+			keys   []string
+		)
 
 		for i := range cols {
 			vals[i] = new(sql.RawBytes)
 			keys = append(keys, cols[i])
 		}
-
 		result = append(result, keys)
 
 		for rows.Next() {
@@ -116,7 +74,8 @@ func Query(env *gabi.Env) http.HandlerFunc {
 			// and you can use type introspection and type assertions
 			// to fetch the column into a typed variable.
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
+				env.Logger.Errorf("Unable to process database query: %s", err)
+				_ = queryErrorResponse(w, err)
 				return
 			}
 
@@ -131,18 +90,42 @@ func Query(env *gabi.Env) http.HandlerFunc {
 
 		err = rows.Err()
 		if err != nil {
-			ret.Error = err.Error()
-			json.NewEncoder(w).Encode(ret)
+			env.Logger.Errorf("Unable to process database query: %s", err)
+			_ = queryErrorResponse(w, err)
 			return
 		}
 
 		err = tx.Commit()
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			env.Logger.Errorf("Unable to commit database changes: %s", err)
+			_ = queryErrorResponse(w, err)
+			return
 		}
 
-		ret.Result = result
-		ret.Error = ""
-		json.NewEncoder(w).Encode(ret)
+		w.Header().Set("Cache-Control", "private, no-store")
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		_ = json.NewEncoder(w).Encode(&models.QueryResponse{
+			Result: result,
+		})
 	}
+}
+
+func queryErrorResponse(w http.ResponseWriter, err error) error {
+	var (
+		parseError   *url.Error
+		syscallError *os.SyscallError
+	)
+
+	// Stop the SQL drivers from leaking credentials on connection errors.
+	if errors.As(err, &parseError) || errors.As(err, &syscallError) {
+		http.Error(w, "Unable to connect to the database", http.StatusServiceUnavailable)
+		return nil
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(http.StatusBadRequest)
+
+	return json.NewEncoder(w).Encode(&models.QueryResponse{
+		Error: err.Error(),
+	})
 }

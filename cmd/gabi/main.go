@@ -3,21 +3,19 @@ package main
 import (
 	"log"
 
-	"go.uber.org/zap"
-
-	gabi "github.com/app-sre/gabi/pkg"
 	"github.com/app-sre/gabi/pkg/cmd"
+	"go.uber.org/zap"
 )
 
 func main() {
-	logger, err := zap.NewDevelopment() // NewProduction
+	l, err := zap.NewDevelopment()
 	if err != nil {
-		log.Fatalf("can't initialize zap logger: %v", err)
+		log.Fatalf("Unable to initialize Zap logger: %s", err)
 	}
-	defer logger.Sync()
+	defer func() { _ = l.Sync() }()
 
-	loggerS := logger.Sugar()
-	loggerS.Info("Starting gabi server version " + gabi.Version)
-
-	cmd.Run(loggerS)
+	logger := l.Sugar()
+	if err := cmd.Run(logger); err != nil {
+		logger.Fatalf("Unable to start GABI: %s", err)
+	}
 }

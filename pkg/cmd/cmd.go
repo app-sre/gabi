@@ -2,8 +2,10 @@ package cmd
 
 import (
 	"database/sql"
+	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"strconv"
@@ -12,6 +14,7 @@ import (
 	gorillaHandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	_ "github.com/jackc/pgx/v4/stdlib"
+	"github.com/justinas/alice"
 	"go.uber.org/zap"
 
 	gabi "github.com/app-sre/gabi/pkg"
@@ -20,64 +23,91 @@ import (
 	"github.com/app-sre/gabi/pkg/env/splunk"
 	"github.com/app-sre/gabi/pkg/env/user"
 	"github.com/app-sre/gabi/pkg/handlers"
+	"github.com/app-sre/gabi/pkg/middleware"
+	"github.com/app-sre/gabi/pkg/version"
 )
 
-func Run(logger *zap.SugaredLogger) {
-	usere := user.Userenv{}
+func Run(logger *zap.SugaredLogger) error {
+	production := os.Getenv("ENVIRONMENT") == "production"
+	logger.Infof("Starting GABI version: %s", version.Version())
+
+	usere := user.NewUserEnv()
 	err := usere.Populate()
 	if err != nil {
-		logger.Fatal(err)
+		return fmt.Errorf("unable to configure users: %s", err)
 	}
-	logger.Info("Authorized Users populated.")
 
-	dbe := db.Dbenv{}
+	expiry := usere.IsExpired()
+	date := usere.Expiration.Format(user.ExpiryDateLayout)
+	if usere.IsDeprecated() {
+		expiry = len(usere.Users) == 0
+		date = "UNKNOWN"
+	}
+
+	logger.Infof("Production: %t, expired: %t (expiration date: %s)", production, expiry, date)
+	logger.Debugf("Authorized users: %v", usere.Users)
+
+	dbe := db.NewDBEnv()
 	err = dbe.Populate()
 	if err != nil {
-		logger.Fatal(err)
+		return fmt.Errorf("unable to configure database: %s", err)
 	}
-	logger.Info("Database environment variables populated.")
+	logger.Infof("Using database driver: %s (write access: %t)", dbe.Driver, dbe.AllowWrite)
 
-	a := &audit.LoggingAudit{Logger: logger}
-	logger.Info("Using default audit backend: stdout logger.")
-
-	se := &splunk.Splunkenv{}
-	err = se.Populate()
+	db, err := sql.Open(dbe.Driver.Name(), dbe.ConnectionDSN())
 	if err != nil {
-		logger.Fatal(err)
-	}
-	logger.Info("Splunk environment variables populated.")
-
-	s := &audit.SplunkAudit{Env: se}
-	logger.Info("Using Splunk audit backend.")
-
-	logger.Info("Establishing DB connection pool.")
-	db, err := sql.Open(dbe.DB_DRIVER, dbe.ConnStr)
-	if err != nil {
-		logger.Fatal("Fatal error opening database.")
+		return fmt.Errorf("unable to open database connection: %s", err)
 	}
 	defer db.Close()
-	logger.Info("Database connection handle established.")
-	logger.Infof("Using %s database driver.", dbe.DB_DRIVER)
+	logger.Debugf("Connected to database host: %s (port: %d)", dbe.Host, dbe.Port)
 
-	env := &gabi.Env{DB: db, DB_WRITE: dbe.DB_WRITE, Logger: logger, Audit: a, SplunkAudit: *s, Users: usere.Users}
+	la := audit.NewLoggerAudit(logger)
+
+	se := splunk.NewSplunkEnv()
+	err = se.Populate()
+	if err != nil {
+		return fmt.Errorf("unable to configure Splunk: %s", err)
+	}
+	logger.Infof("Sending audit to Splunk endpoint: %s", se.Endpoint)
+
+	sa := audit.NewSplunkAudit(se)
+
+	env := &gabi.Env{
+		DB:          db,
+		DBEnv:       dbe,
+		UserEnv:     usere,
+		LoggerAudit: la,
+		SplunkAudit: sa,
+		Logger:      logger,
+	}
 
 	// Temp workaround for easy to access io.Writer.
 	defaultLogOutput := log.Default().Writer()
 
 	healthLogOutput := io.Discard
-	if os.Getenv("ENVIRONMENT") != "production" {
+	if !production {
 		healthLogOutput = defaultLogOutput
 	}
+	logHandler := gorillaHandlers.LoggingHandler
+
+	queryChain := alice.New(
+		alice.Constructor(middleware.Recovery(env)),
+		alice.Constructor(middleware.Authorization(env)),
+		alice.Constructor(middleware.Expiration(env)),
+		alice.Constructor(middleware.Audit(env)),
+	).Then(handlers.Query(env))
 
 	r := mux.NewRouter()
-
-	r.Handle("/healthcheck", gorillaHandlers.LoggingHandler(healthLogOutput, handlers.Healthcheck(env)))
-	r.Handle("/query", gorillaHandlers.LoggingHandler(defaultLogOutput, handlers.Query(env)))
-
-	logger.Info("Router initialized.")
+	r.Handle("/healthcheck", logHandler(healthLogOutput, handlers.Healthcheck(env))).Methods("GET")
+	r.Handle("/query", logHandler(defaultLogOutput, queryChain)).Methods("POST")
 
 	servePort := 8080
-	logger.Infof("HTTP server starting on port %d.", servePort)
+	logger.Infof("HTTP server starting on port: %d", servePort)
 
-	http.ListenAndServe(":"+strconv.Itoa(servePort), r)
+	err = http.ListenAndServe(net.JoinHostPort("", strconv.Itoa(servePort)), r)
+	if err != nil {
+		return fmt.Errorf("unable to start HTTP server: %s", err)
+	}
+
+	return nil
 }

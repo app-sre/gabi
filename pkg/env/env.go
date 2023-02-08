@@ -2,14 +2,18 @@ package env
 
 import "fmt"
 
-type EnvError struct{ Env string }
-
-func (e *EnvError) Error() string {
-	return fmt.Sprintf("Missing required environment variable: %s", e.Env)
+type EnvError struct {
+	Name string
 }
 
-type EnvConvError struct{ Env string }
+func (e *EnvError) Error() string {
+	return fmt.Sprintf("unable to access environment variable: %s", e.Name)
+}
 
-func (e *EnvConvError) Error() string {
-	return fmt.Sprintf("Failed to perform type conversion on required environment variable: %s", e.Env)
+type EnvTypeError struct {
+	Name string
+}
+
+func (e *EnvTypeError) Error() string {
+	return fmt.Sprintf("unable to convert environment variable: %s", e.Name)
 }

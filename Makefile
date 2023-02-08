@@ -3,16 +3,16 @@
 all: build
 
 build:
-	go build -o gabi cmd/gabi/main.go 
+	go build -o gabi cmd/gabi/main.go
 
 linux:
-	CGO_ENABLED=0 GOOS=linux go build -a -tags netgo -ldflags '-w' -o gabi cmd/gabi/main.go 
+	CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w' -o gabi cmd/gabi/main.go
 
 clean:
 	rm -f gabi
 
 test:
-	go test -count=1 -v -timeout 300s ./...
+	go test ./...
 
 docker-build:
 	$(BUILD_CMD) -t ${IMG} -f Dockerfile .

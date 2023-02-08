@@ -1,0 +1,5 @@
+[allowlist]
+description = "Allow Go test files"
+files = [
+  '''^(.*?)_test\.go'''
+]
