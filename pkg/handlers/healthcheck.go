@@ -11,9 +11,11 @@ import (
 	gabi "github.com/app-sre/gabi/pkg"
 )
 
+const healthcheckTimeout = 5 * time.Second
+
 func Healthcheck(env *gabi.Env) http.Handler {
 	return healthcheck.Handler(
-		healthcheck.WithTimeout(5*time.Second),
+		healthcheck.WithTimeout(healthcheckTimeout),
 		healthcheck.WithChecker(
 			"database", healthcheck.CheckerFunc(
 				func(ctx context.Context) error {

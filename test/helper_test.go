@@ -52,7 +52,7 @@ func createConfigurationFile(t *testing.T, expiration time.Time, users []string)
 func createSplunkIngestToken(t *testing.T, client http.Client, host, port, password string) string {
 	splunkURL := fmt.Sprintf("https://%s:%s/servicesNS/admin/splunk_httpinput/data/inputs/http?output_mode=json", host, port)
 
-	req, err := http.NewRequest("POST", splunkURL, bytes.NewBufferString(`name=mytokexna`))
+	req, err := http.NewRequest(http.MethodPost, splunkURL, bytes.NewBufferString(`name=mytokexna`))
 	if err != nil {
 		t.Fatal(err)
 	}

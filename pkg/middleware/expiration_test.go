@@ -51,7 +51,7 @@ func TestExpiration(t *testing.T) {
 			var body bytes.Buffer
 
 			w := httptest.NewRecorder()
-			r := httptest.NewRequest("GET", "/", &bytes.Buffer{})
+			r := httptest.NewRequest(http.MethodGet, "/", &bytes.Buffer{})
 
 			logger := test.DummyLogger(io.Discard).Sugar()
 
@@ -59,6 +59,8 @@ func TestExpiration(t *testing.T) {
 			Expiration(aux)(dummyHandler).ServeHTTP(w, r)
 
 			actual := w.Result()
+			defer func() { _ = actual.Body.Close() }()
+
 			_, _ = io.Copy(&body, actual.Body)
 
 			assert.Equal(t, tc.code, actual.StatusCode)

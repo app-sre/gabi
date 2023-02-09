@@ -368,7 +368,7 @@ func TestAudit(t *testing.T) {
 			var client, server, output bytes.Buffer
 
 			w := httptest.NewRecorder()
-			r := httptest.NewRequest("GET", "/", tc.request())
+			r := httptest.NewRequest(http.MethodGet, "/", tc.request())
 
 			s := httptest.NewServer(http.HandlerFunc(tc.handler(&server)))
 			defer s.Close()
@@ -385,6 +385,8 @@ func TestAudit(t *testing.T) {
 			Audit(aux)(dummyHandler).ServeHTTP(w, r.WithContext(tc.context()))
 
 			actual := w.Result()
+			defer func() { _ = actual.Body.Close() }()
+
 			_, _ = io.Copy(&client, actual.Body)
 
 			assert.Equal(t, tc.code, actual.StatusCode)
@@ -393,5 +395,4 @@ func TestAudit(t *testing.T) {
 			assert.Regexp(t, tc.output, output.String())
 		})
 	}
-
 }

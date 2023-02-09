@@ -219,6 +219,7 @@ func TestPopulate(t *testing.T) {
 	for _, tc := range cases {
 		tc := tc
 		t.Run(tc.description, func(t *testing.T) {
+			tc.clean()
 			defer os.Remove(tc.given())
 
 			actual := &UserEnv{}
@@ -230,8 +231,6 @@ func TestPopulate(t *testing.T) {
 			} else {
 				assert.Nil(t, err)
 			}
-
-			tc.clean()
 
 			assert.Equal(t, tc.expected, actual)
 		})
@@ -420,7 +419,7 @@ func TestUnmarshalJSON(t *testing.T) {
 		{
 			"valid JSON with user set to invalid value",
 			`{"users":["test", -1], "expiration": "2023-01-01"}`,
-			UserEnv{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
+			UserEnv{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), Users: []string{"test"}},
 			true,
 			`unable to parse user`,
 		},

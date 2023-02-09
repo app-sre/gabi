@@ -225,8 +225,9 @@ func TestPopulate(t *testing.T) {
 	for _, tc := range cases {
 		tc := tc
 		t.Run(tc.description, func(t *testing.T) {
-			tc.given()
+			tc.clean()
 
+			tc.given()
 			actual := &DBEnv{}
 			err := actual.Populate()
 
@@ -237,10 +238,7 @@ func TestPopulate(t *testing.T) {
 				assert.Nil(t, err)
 			}
 
-			tc.clean()
-
 			assert.Equal(t, tc.expected, actual)
-
 		})
 	}
 }
@@ -309,14 +307,13 @@ func TestConnectionDSN(t *testing.T) {
 	for _, tc := range cases {
 		tc := tc
 		t.Run(tc.description, func(t *testing.T) {
-			tc.given()
+			tc.clean()
 
+			tc.given()
 			aux := &DBEnv{}
 			err := aux.Populate()
 
 			actual := aux.ConnectionDSN()
-
-			tc.clean()
 
 			assert.Nil(t, err)
 			assert.Equal(t, tc.expected, actual)

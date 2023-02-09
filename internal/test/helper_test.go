@@ -27,7 +27,10 @@ func TestDummyLogger(t *testing.T) {
 				return &bytes.Buffer{}
 			},
 			func(w io.Writer) string {
-				return w.(*bytes.Buffer).String()
+				if b, ok := w.(*bytes.Buffer); ok {
+					return b.String()
+				}
+				return ""
 			},
 			`test`,
 		},
@@ -40,7 +43,10 @@ func TestDummyLogger(t *testing.T) {
 				return &bytes.Buffer{}
 			},
 			func(w io.Writer) string {
-				return w.(*bytes.Buffer).String()
+				if b, ok := w.(*bytes.Buffer); ok {
+					return b.String()
+				}
+				return ""
 			},
 			`test`,
 		},
@@ -54,7 +60,10 @@ func TestDummyLogger(t *testing.T) {
 				return &bytes.Buffer{}
 			},
 			func(w io.Writer) string {
-				return w.(*bytes.Buffer).String()
+				if b, ok := w.(*bytes.Buffer); ok {
+					return b.String()
+				}
+				return ""
 			},
 			"test\ntest2",
 		},
@@ -88,5 +97,4 @@ func TestDummyLogger(t *testing.T) {
 			assert.Contains(t, s, tc.output)
 		})
 	}
-
 }

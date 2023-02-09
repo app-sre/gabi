@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"io"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -231,7 +232,7 @@ func TestQuery(t *testing.T) {
 			var body, output bytes.Buffer
 
 			w := httptest.NewRecorder()
-			r := httptest.NewRequest("GET", "/", tc.request())
+			r := httptest.NewRequest(http.MethodGet, "/", tc.request())
 
 			logger := test.DummyLogger(&output).Sugar()
 
@@ -244,6 +245,8 @@ func TestQuery(t *testing.T) {
 			Query(aux).ServeHTTP(w, r)
 
 			actual := w.Result()
+			defer func() { _ = actual.Body.Close() }()
+
 			_, _ = io.Copy(&body, actual.Body)
 
 			err := mock.ExpectationsWereMet()

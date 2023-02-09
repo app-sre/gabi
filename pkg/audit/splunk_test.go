@@ -66,7 +66,6 @@ func TestNewSplunkAudit(t *testing.T) {
 			assert.Equal(t, tc.expected, actual.SplunkEnv)
 		})
 	}
-
 }
 
 func TestWithHTTPClient(t *testing.T) {
@@ -106,7 +105,6 @@ func TestWithHTTPClient(t *testing.T) {
 			assert.IsType(t, &SplunkAudit{}, aux)
 		})
 	}
-
 }
 
 func TestSetHTTPClient(t *testing.T) {

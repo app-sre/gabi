@@ -1,6 +1,9 @@
 package db
 
 const (
+	driverMySQL      = "mysql"
+	driverPostgreSQL = "pgx"
+
 	driverFormatMySQL      = `%s:%s@tcp(%s:%d)/%s`
 	driverFormatPostgreSQL = `postgres://%s:%s@%s:%d/%s`
 )
@@ -14,18 +17,18 @@ func (t DriverType) String() string {
 func (t DriverType) Name() (name string) {
 	switch t {
 	case "mysql":
-		name = "mysql"
+		name = driverMySQL
 	case "postgres", "postgresql", "pgx":
-		name = "pgx"
+		name = driverPostgreSQL
 	}
 	return
 }
 
 func (t DriverType) Port() (port int) {
 	switch t.String() {
-	case "mysql":
+	case driverMySQL:
 		port = 3306
-	case "pgx":
+	case driverPostgreSQL:
 		port = 5432
 	}
 	return
@@ -33,9 +36,9 @@ func (t DriverType) Port() (port int) {
 
 func (t DriverType) Format() (format string) {
 	switch t.String() {
-	case "mysql":
+	case driverMySQL:
 		format = driverFormatMySQL
-	case "pgx":
+	case driverPostgreSQL:
 		format = driverFormatPostgreSQL
 	}
 	return

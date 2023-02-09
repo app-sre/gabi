@@ -66,16 +66,14 @@ func (u *UserEnv) Populate() error {
 
 	if users := os.Getenv("AUTHORIZED_USERS"); users != "" {
 		ss := strings.Split(users, ",")
-		copy := make([]string, len(ss))
+		aux := make([]string, 0, len(ss))
 
-		i := 0
 		for _, entry := range ss {
 			if s := strings.Trim(entry, " "); s != "" {
-				copy[i] = s
-				i++
+				aux = append(aux, s)
 			}
 		}
-		u.Users = copy[0:i]
+		u.Users = aux
 	}
 
 	return nil
@@ -115,8 +113,7 @@ func (u *UserEnv) MarshalJSON() ([]byte, error) {
 func (u *UserEnv) UnmarshalJSON(b []byte) error {
 	var raw map[string]any
 
-	err := json.Unmarshal(b, &raw)
-	if err != nil {
+	if err := json.Unmarshal(b, &raw); err != nil {
 		return fmt.Errorf("unable to unmarshal user file: %w", err)
 	}
 
@@ -142,16 +139,15 @@ func (u *UserEnv) UnmarshalJSON(b []byte) error {
 		return fmt.Errorf("unable to parse users list: %v", raw["users"])
 	}
 
-	var copy []string
-
 	for _, v := range users {
 		user, ok := v.(string)
 		if !ok {
 			return fmt.Errorf("unable to parse user: %v", v)
 		}
-		copy = append(copy, strings.Trim(user, " "))
+		if s := strings.Trim(user, " "); s != "" {
+			u.Users = append(u.Users, s)
+		}
 	}
-	u.Users = copy
 
 	return nil
 }

@@ -62,7 +62,7 @@ func TestRecovery(t *testing.T) {
 			)
 
 			w := httptest.NewRecorder()
-			r := httptest.NewRequest("GET", "/", &bytes.Buffer{})
+			r := httptest.NewRequest(http.MethodGet, "/", &bytes.Buffer{})
 
 			logger := test.DummyLogger(&output).Sugar()
 
@@ -70,6 +70,8 @@ func TestRecovery(t *testing.T) {
 			Recovery(aux)(tc.given).ServeHTTP(w, r)
 
 			actual := w.Result()
+			defer func() { _ = actual.Body.Close() }()
+
 			_, _ = io.Copy(&body, actual.Body)
 
 			assert.Equal(t, tc.code, actual.StatusCode)
