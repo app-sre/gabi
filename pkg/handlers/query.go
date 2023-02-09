@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -82,7 +83,13 @@ func Query(env *gabi.Env) http.HandlerFunc {
 			var row []string
 
 			for _, value := range vals {
-				content := reflect.ValueOf(value).Interface().(*sql.RawBytes)
+				content, ok := reflect.ValueOf(value).Interface().(*sql.RawBytes)
+				if !ok {
+					err = fmt.Errorf("unable to convert value type %T to *sql.RawBytes", value)
+					env.Logger.Errorf("Unable to process database query: %s", err)
+					_ = queryErrorResponse(w, err)
+					return
+				}
 				row = append(row, string(*content))
 			}
 			result = append(result, row)
