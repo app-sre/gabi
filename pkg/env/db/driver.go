@@ -1,8 +1,14 @@
 package db
 
 const (
-	driverFormatMySQL      = `%s:%s@tcp(%s:%d)/%s`
-	driverFormatPostgreSQL = `postgres://%s:%s@%s:%d/%s`
+	driverMySQL      = "mysql"
+	driverPostgreSQL = "pgx"
+
+	driverMySQLPort      = 3306
+	driverPostgreSQLPort = 5432
+
+	driverMySQLFormat      = `%s:%s@tcp(%s:%d)/%s`
+	driverPostgreSQLFormat = `postgres://%s:%s@%s:%d/%s`
 )
 
 type DriverType string
@@ -11,34 +17,37 @@ func (t DriverType) String() string {
 	return t.Name()
 }
 
-func (t DriverType) Name() (name string) {
+func (t DriverType) Name() string {
 	switch t {
 	case "mysql":
-		name = "mysql"
-	case "postgres", "postgresql", "pgx":
-		name = "pgx"
+		return driverMySQL
+	case "postgresql", "postgres", "pgx":
+		return driverPostgreSQL
+	default:
+		return ""
 	}
-	return
 }
 
-func (t DriverType) Port() (port int) {
-	switch t.String() {
-	case "mysql":
-		port = 3306
-	case "pgx":
-		port = 5432
+func (t DriverType) Port() int {
+	switch t.Name() {
+	case driverMySQL:
+		return driverMySQLPort
+	case driverPostgreSQL:
+		return driverPostgreSQLPort
+	default:
+		return 0
 	}
-	return
 }
 
-func (t DriverType) Format() (format string) {
-	switch t.String() {
-	case "mysql":
-		format = driverFormatMySQL
-	case "pgx":
-		format = driverFormatPostgreSQL
+func (t DriverType) Format() string {
+	switch t.Name() {
+	case driverMySQL:
+		return driverMySQLFormat
+	case driverPostgreSQL:
+		return driverPostgreSQLFormat
+	default:
+		return ""
 	}
-	return
 }
 
 func (t DriverType) IsValid() bool {
@@ -49,5 +58,6 @@ func (t DriverType) IsValid() bool {
 		"pgx":        struct{}{},
 	}
 	_, ok := types[string(t)]
+
 	return ok
 }

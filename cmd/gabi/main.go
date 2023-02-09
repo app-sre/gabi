@@ -4,6 +4,8 @@ import (
 	"log"
 
 	"github.com/app-sre/gabi/pkg/cmd"
+	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/jackc/pgx/v4/stdlib"
 	"go.uber.org/zap"
 )
 

@@ -33,7 +33,9 @@ func Audit(env *gabi.Env) Middleware {
 
 			ctxUser := ctx.Value(contextUserKey)
 			if ctxUser != nil {
-				user = ctxUser.(string)
+				if s, ok := ctxUser.(string); ok {
+					user = s
+				}
 			} else {
 				user = r.Header.Get(forwardedUserHeader)
 			}

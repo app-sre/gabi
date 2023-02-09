@@ -2,11 +2,14 @@ package audit
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"time"
 
 	"github.com/app-sre/gabi/pkg/env/splunk"
 	"github.com/app-sre/gabi/pkg/version"
@@ -15,6 +18,9 @@ import (
 const (
 	splunkSource     = "gabi"
 	splunkSourceType = "json"
+
+	connectTimeout = 5 * time.Second
+	requestTimeout = 30 * time.Second
 )
 
 type SplunkAudit struct {
@@ -54,6 +60,9 @@ func NewSplunkAudit(splunk *splunk.SplunkEnv, options ...Option) *SplunkAudit {
 
 	s.client = &http.Client{
 		Transport: &http.Transport{
+			DialContext: (&net.Dialer{
+				Timeout: connectTimeout,
+			}).DialContext,
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true,
 			},
@@ -87,14 +96,17 @@ func (d *SplunkAudit) Write(q *QueryData) error {
 		Pod:       d.SplunkEnv.Pod,
 	}
 
-	splunkJSON, err := json.Marshal(query)
+	content, err := json.Marshal(query)
 	if err != nil {
 		return fmt.Errorf("unable to marshal Splunk audit: %w", err)
 	}
 
-	splunkURL := fmt.Sprintf("%s/services/collector/event", d.SplunkEnv.Endpoint)
+	url := fmt.Sprintf("%s/services/collector/event", d.SplunkEnv.Endpoint)
 
-	req, err := http.NewRequest("POST", splunkURL, bytes.NewBuffer(splunkJSON))
+	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(content))
 	if err != nil {
 		return fmt.Errorf("unable to create request to Splunk: %w", err)
 	}

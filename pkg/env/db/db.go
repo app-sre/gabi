@@ -79,7 +79,7 @@ func (d *DBEnv) Populate() error {
 	}
 
 	// Only do this for PostgreSQL driver as the MySQL driver will handle encoding.
-	if d.Driver == "pgx" {
+	if d.Driver == driverPostgreSQL {
 		d.Password = url.PathEscape(d.Password)
 	}
 

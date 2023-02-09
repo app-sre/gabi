@@ -105,7 +105,7 @@ func TestAuthorization(t *testing.T) {
 			)
 
 			w := httptest.NewRecorder()
-			r := httptest.NewRequest("GET", "/", &bytes.Buffer{})
+			r := httptest.NewRequest(http.MethodGet, "/", &bytes.Buffer{})
 
 			logger := test.DummyLogger(io.Discard).Sugar()
 
@@ -121,6 +121,8 @@ func TestAuthorization(t *testing.T) {
 			})).ServeHTTP(w, r)
 
 			actual := w.Result()
+			defer func() { _ = actual.Body.Close() }()
+
 			_, _ = io.Copy(&body, actual.Body)
 
 			assert.Equal(t, tc.code, actual.StatusCode)

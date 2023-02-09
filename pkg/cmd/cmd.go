@@ -9,11 +9,10 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
-	_ "github.com/go-sql-driver/mysql"
 	gorillaHandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/justinas/alice"
 	"go.uber.org/zap"
 
@@ -27,6 +26,12 @@ import (
 	"github.com/app-sre/gabi/pkg/version"
 )
 
+const (
+	readTimeout       = 1 * time.Minute
+	readHeaderTimeout = 20 * time.Second
+	writeTimeout      = 2 * time.Minute
+)
+
 func Run(logger *zap.SugaredLogger) error {
 	production := os.Getenv("ENVIRONMENT") == "production"
 	logger.Infof("Starting GABI version: %s", version.Version())
@@ -34,7 +39,7 @@ func Run(logger *zap.SugaredLogger) error {
 	usere := user.NewUserEnv()
 	err := usere.Populate()
 	if err != nil {
-		return fmt.Errorf("unable to configure users: %s", err)
+		return fmt.Errorf("unable to configure users: %w", err)
 	}
 
 	expiry := usere.IsExpired()
@@ -50,13 +55,13 @@ func Run(logger *zap.SugaredLogger) error {
 	dbe := db.NewDBEnv()
 	err = dbe.Populate()
 	if err != nil {
-		return fmt.Errorf("unable to configure database: %s", err)
+		return fmt.Errorf("unable to configure database: %w", err)
 	}
 	logger.Infof("Using database driver: %s (write access: %t)", dbe.Driver, dbe.AllowWrite)
 
 	db, err := sql.Open(dbe.Driver.Name(), dbe.ConnectionDSN())
 	if err != nil {
-		return fmt.Errorf("unable to open database connection: %s", err)
+		return fmt.Errorf("unable to open database connection: %w", err)
 	}
 	defer db.Close()
 	logger.Debugf("Connected to database host: %s (port: %d)", dbe.Host, dbe.Port)
@@ -66,7 +71,7 @@ func Run(logger *zap.SugaredLogger) error {
 	se := splunk.NewSplunkEnv()
 	err = se.Populate()
 	if err != nil {
-		return fmt.Errorf("unable to configure Splunk: %s", err)
+		return fmt.Errorf("unable to configure Splunk: %w", err)
 	}
 	logger.Infof("Sending audit to Splunk endpoint: %s", se.Endpoint)
 
@@ -101,12 +106,18 @@ func Run(logger *zap.SugaredLogger) error {
 	r.Handle("/healthcheck", logHandler(healthLogOutput, handlers.Healthcheck(env))).Methods("GET")
 	r.Handle("/query", logHandler(defaultLogOutput, queryChain)).Methods("POST")
 
-	servePort := 8080
-	logger.Infof("HTTP server starting on port: %d", servePort)
+	port := 8080
+	logger.Infof("HTTP server starting on port: %d", port)
 
-	err = http.ListenAndServe(net.JoinHostPort("", strconv.Itoa(servePort)), r)
-	if err != nil {
-		return fmt.Errorf("unable to start HTTP server: %s", err)
+	server := &http.Server{
+		Addr:              net.JoinHostPort("", strconv.Itoa(port)),
+		Handler:           r,
+		ReadTimeout:       readTimeout,
+		ReadHeaderTimeout: readHeaderTimeout,
+		WriteTimeout:      writeTimeout,
+	}
+	if err := server.ListenAndServe(); err != nil {
+		return fmt.Errorf("unable to start HTTP server: %w", err)
 	}
 
 	return nil

@@ -22,7 +22,7 @@ func Query(env *gabi.Env) http.HandlerFunc {
 		err := json.NewDecoder(r.Body).Decode(&request)
 		if err != nil {
 			env.Logger.Errorf("Unable to decode request body: %s", err)
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				http.Error(w, "Request body cannot be empty", http.StatusBadRequest)
 				return
 			}

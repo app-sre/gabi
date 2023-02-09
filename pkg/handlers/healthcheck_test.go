@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -49,7 +50,7 @@ func TestHealthcheck(t *testing.T) {
 			defer func() { _ = db.Close() }()
 
 			w := httptest.NewRecorder()
-			r := httptest.NewRequest("GET", "/", &bytes.Buffer{})
+			r := httptest.NewRequest(http.MethodGet, "/", &bytes.Buffer{})
 
 			logger := test.DummyLogger(io.Discard).Sugar()
 
@@ -59,6 +60,8 @@ func TestHealthcheck(t *testing.T) {
 			Healthcheck(aux).ServeHTTP(w, r)
 
 			actual := w.Result()
+			defer func() { _ = actual.Body.Close() }()
+
 			_, _ = io.Copy(&body, actual.Body)
 
 			err := mock.ExpectationsWereMet()

@@ -123,8 +123,9 @@ func TestPopulate(t *testing.T) {
 	for _, tc := range cases {
 		tc := tc
 		t.Run(tc.description, func(t *testing.T) {
-			tc.given()
+			tc.clean()
 
+			tc.given()
 			actual := &SplunkEnv{}
 			err := actual.Populate()
 
@@ -134,8 +135,6 @@ func TestPopulate(t *testing.T) {
 			} else {
 				assert.Nil(t, err)
 			}
-
-			tc.clean()
 
 			assert.Equal(t, tc.expected, actual)
 		})
