@@ -28,14 +28,13 @@ func TestPopulate(t *testing.T) {
 		{
 			"all environment variables set",
 			func() {
-				os.Clearenv()
-				os.Setenv("DB_DRIVER", "pgx")
-				os.Setenv("DB_HOST", "test")
-				os.Setenv("DB_PORT", "1234")
-				os.Setenv("DB_USER", "test")
-				os.Setenv("DB_PASS", "test123")
-				os.Setenv("DB_NAME", "test")
-				os.Setenv("DB_WRITE", "false")
+				t.Setenv("DB_DRIVER", "pgx")
+				t.Setenv("DB_HOST", "test")
+				t.Setenv("DB_PORT", "1234")
+				t.Setenv("DB_USER", "test")
+				t.Setenv("DB_PASS", "test123")
+				t.Setenv("DB_NAME", "test")
+				t.Setenv("DB_WRITE", "false")
 			},
 			&DBEnv{
 				Driver:     "pgx",
@@ -52,7 +51,6 @@ func TestPopulate(t *testing.T) {
 		{
 			"missing required environment variables",
 			func() {
-				os.Clearenv()
 			},
 			&DBEnv{},
 			true,
@@ -61,8 +59,7 @@ func TestPopulate(t *testing.T) {
 		{
 			"required environment variable DB_DRIVER with empty value set",
 			func() {
-				os.Clearenv()
-				os.Setenv("DB_DRIVER", "")
+				t.Setenv("DB_DRIVER", "")
 			},
 			&DBEnv{},
 			true,
@@ -71,8 +68,7 @@ func TestPopulate(t *testing.T) {
 		{
 			"missing required DB_HOST environment variable",
 			func() {
-				os.Clearenv()
-				os.Setenv("DB_DRIVER", "pgx")
+				t.Setenv("DB_DRIVER", "pgx")
 			},
 			&DBEnv{Driver: "pgx"},
 			true,
@@ -81,10 +77,9 @@ func TestPopulate(t *testing.T) {
 		{
 			"missing required DB_USER environment variable",
 			func() {
-				os.Clearenv()
-				os.Setenv("DB_DRIVER", "pgx")
-				os.Setenv("DB_HOST", "test")
-				os.Setenv("DB_PORT", "1234")
+				t.Setenv("DB_DRIVER", "pgx")
+				t.Setenv("DB_HOST", "test")
+				t.Setenv("DB_PORT", "1234")
 			},
 			&DBEnv{Driver: "pgx", Host: "test", Port: 1234},
 			true,
@@ -93,11 +88,10 @@ func TestPopulate(t *testing.T) {
 		{
 			"missing required DB_PASS environment variable",
 			func() {
-				os.Clearenv()
-				os.Setenv("DB_DRIVER", "pgx")
-				os.Setenv("DB_HOST", "test")
-				os.Setenv("DB_PORT", "1234")
-				os.Setenv("DB_USER", "test")
+				t.Setenv("DB_DRIVER", "pgx")
+				t.Setenv("DB_HOST", "test")
+				t.Setenv("DB_PORT", "1234")
+				t.Setenv("DB_USER", "test")
 			},
 			&DBEnv{Driver: "pgx", Host: "test", Port: 1234, Username: "test"},
 			true,
@@ -106,12 +100,11 @@ func TestPopulate(t *testing.T) {
 		{
 			"missing required DB_NAME environment variable",
 			func() {
-				os.Clearenv()
-				os.Setenv("DB_DRIVER", "pgx")
-				os.Setenv("DB_HOST", "test")
-				os.Setenv("DB_PORT", "1234")
-				os.Setenv("DB_USER", "test")
-				os.Setenv("DB_PASS", "test123")
+				t.Setenv("DB_DRIVER", "pgx")
+				t.Setenv("DB_HOST", "test")
+				t.Setenv("DB_PORT", "1234")
+				t.Setenv("DB_USER", "test")
+				t.Setenv("DB_PASS", "test123")
 			},
 			&DBEnv{Driver: "pgx", Host: "test", Port: 1234, Username: "test", Password: "test123"},
 			true,
@@ -120,12 +113,11 @@ func TestPopulate(t *testing.T) {
 		{
 			"only required environment variables set",
 			func() {
-				os.Clearenv()
-				os.Setenv("DB_DRIVER", "pgx")
-				os.Setenv("DB_HOST", "test")
-				os.Setenv("DB_USER", "test")
-				os.Setenv("DB_PASS", "test123")
-				os.Setenv("DB_NAME", "test")
+				t.Setenv("DB_DRIVER", "pgx")
+				t.Setenv("DB_HOST", "test")
+				t.Setenv("DB_USER", "test")
+				t.Setenv("DB_PASS", "test123")
+				t.Setenv("DB_NAME", "test")
 			},
 			&DBEnv{
 				Driver:     "pgx",
@@ -142,12 +134,11 @@ func TestPopulate(t *testing.T) {
 		{
 			"environment variable with alternative driver name set",
 			func() {
-				os.Clearenv()
-				os.Setenv("DB_DRIVER", "postgres")
-				os.Setenv("DB_HOST", "test")
-				os.Setenv("DB_USER", "test")
-				os.Setenv("DB_PASS", "test123")
-				os.Setenv("DB_NAME", "test")
+				t.Setenv("DB_DRIVER", "postgres")
+				t.Setenv("DB_HOST", "test")
+				t.Setenv("DB_USER", "test")
+				t.Setenv("DB_PASS", "test123")
+				t.Setenv("DB_NAME", "test")
 			},
 			&DBEnv{
 				Driver:     "postgres",
@@ -164,8 +155,7 @@ func TestPopulate(t *testing.T) {
 		{
 			"environment variable with invalid driver name set",
 			func() {
-				os.Clearenv()
-				os.Setenv("DB_DRIVER", "test")
+				t.Setenv("DB_DRIVER", "test")
 			},
 			&DBEnv{Driver: "test", Host: "", Port: 0, Username: "", Password: "", Name: "", AllowWrite: false},
 			true,
@@ -174,13 +164,12 @@ func TestPopulate(t *testing.T) {
 		{
 			"environment variable with database write enabled",
 			func() {
-				os.Clearenv()
-				os.Setenv("DB_DRIVER", "pgx")
-				os.Setenv("DB_HOST", "test")
-				os.Setenv("DB_USER", "test")
-				os.Setenv("DB_PASS", "test123")
-				os.Setenv("DB_NAME", "test")
-				os.Setenv("DB_WRITE", "true")
+				t.Setenv("DB_DRIVER", "pgx")
+				t.Setenv("DB_HOST", "test")
+				t.Setenv("DB_USER", "test")
+				t.Setenv("DB_PASS", "test123")
+				t.Setenv("DB_NAME", "test")
+				t.Setenv("DB_WRITE", "true")
 			},
 			&DBEnv{
 				Driver:     "pgx",
@@ -197,10 +186,9 @@ func TestPopulate(t *testing.T) {
 		{
 			"environment variable with invalid database port set",
 			func() {
-				os.Clearenv()
-				os.Setenv("DB_DRIVER", "pgx")
-				os.Setenv("DB_HOST", "test")
-				os.Setenv("DB_PORT", "test")
+				t.Setenv("DB_DRIVER", "pgx")
+				t.Setenv("DB_HOST", "test")
+				t.Setenv("DB_PORT", "test")
 			},
 			&DBEnv{Driver: "pgx", Host: "test", Port: 5432, Username: "", Password: "", Name: "", AllowWrite: false},
 			true,
@@ -209,13 +197,12 @@ func TestPopulate(t *testing.T) {
 		{
 			"environment variable with invalid database write controls",
 			func() {
-				os.Clearenv()
-				os.Setenv("DB_DRIVER", "pgx")
-				os.Setenv("DB_HOST", "test")
-				os.Setenv("DB_USER", "test")
-				os.Setenv("DB_PASS", "test123")
-				os.Setenv("DB_NAME", "test")
-				os.Setenv("DB_WRITE", "-1")
+				t.Setenv("DB_DRIVER", "pgx")
+				t.Setenv("DB_HOST", "test")
+				t.Setenv("DB_USER", "test")
+				t.Setenv("DB_PASS", "test123")
+				t.Setenv("DB_NAME", "test")
+				t.Setenv("DB_WRITE", "-1")
 			},
 			&DBEnv{Driver: "pgx", Host: "test", Port: 5432, Username: "test", Password: "test123", Name: "test", AllowWrite: false},
 			true,
@@ -226,6 +213,10 @@ func TestPopulate(t *testing.T) {
 	for _, tc := range cases {
 		tc := tc
 		t.Run(tc.description, func(t *testing.T) {
+			t.Cleanup(func() {
+				os.Clearenv()
+			})
+
 			tc.given()
 
 			actual := &DBEnv{}
@@ -252,52 +243,48 @@ func TestConnectionDSN(t *testing.T) {
 		{
 			"connection string for PostgreSQL",
 			func() {
-				os.Clearenv()
-				os.Setenv("DB_DRIVER", "pgx")
-				os.Setenv("DB_HOST", "test")
-				os.Setenv("DB_PORT", "1234")
-				os.Setenv("DB_USER", "test")
-				os.Setenv("DB_PASS", "test123")
-				os.Setenv("DB_NAME", "test")
+				t.Setenv("DB_DRIVER", "pgx")
+				t.Setenv("DB_HOST", "test")
+				t.Setenv("DB_PORT", "1234")
+				t.Setenv("DB_USER", "test")
+				t.Setenv("DB_PASS", "test123")
+				t.Setenv("DB_NAME", "test")
 			},
 			`postgres://test:test123@test:1234/test`,
 		},
 		{
 			"connection string for PostgreSQL with password using reserved characters",
 			func() {
-				os.Clearenv()
-				os.Setenv("DB_DRIVER", "pgx")
-				os.Setenv("DB_HOST", "test")
-				os.Setenv("DB_PORT", "1234")
-				os.Setenv("DB_USER", "test")
-				os.Setenv("DB_PASS", "t#e%s$t&!123")
-				os.Setenv("DB_NAME", "test")
+				t.Setenv("DB_DRIVER", "pgx")
+				t.Setenv("DB_HOST", "test")
+				t.Setenv("DB_PORT", "1234")
+				t.Setenv("DB_USER", "test")
+				t.Setenv("DB_PASS", "t#e%s$t&!123")
+				t.Setenv("DB_NAME", "test")
 			},
 			`postgres://test:t%23e%25s$t&%21123@test:1234/test`,
 		},
 		{
 			"connection string for MySQL",
 			func() {
-				os.Clearenv()
-				os.Setenv("DB_DRIVER", "mysql")
-				os.Setenv("DB_HOST", "test")
-				os.Setenv("DB_PORT", "1234")
-				os.Setenv("DB_USER", "test")
-				os.Setenv("DB_PASS", "test123")
-				os.Setenv("DB_NAME", "test")
+				t.Setenv("DB_DRIVER", "mysql")
+				t.Setenv("DB_HOST", "test")
+				t.Setenv("DB_PORT", "1234")
+				t.Setenv("DB_USER", "test")
+				t.Setenv("DB_PASS", "test123")
+				t.Setenv("DB_NAME", "test")
 			},
 			`test:test123@tcp(test:1234)/test`,
 		},
 		{
 			"connection string for MySQL with password using reserved characters",
 			func() {
-				os.Clearenv()
-				os.Setenv("DB_DRIVER", "mysql")
-				os.Setenv("DB_HOST", "test")
-				os.Setenv("DB_PORT", "1234")
-				os.Setenv("DB_USER", "test")
-				os.Setenv("DB_PASS", "t#e%s$t&!123")
-				os.Setenv("DB_NAME", "test")
+				t.Setenv("DB_DRIVER", "mysql")
+				t.Setenv("DB_HOST", "test")
+				t.Setenv("DB_PORT", "1234")
+				t.Setenv("DB_USER", "test")
+				t.Setenv("DB_PASS", "t#e%s$t&!123")
+				t.Setenv("DB_NAME", "test")
 			},
 			`test:t#e%s$t&!123@tcp(test:1234)/test`,
 		},
@@ -306,6 +293,10 @@ func TestConnectionDSN(t *testing.T) {
 	for _, tc := range cases {
 		tc := tc
 		t.Run(tc.description, func(t *testing.T) {
+			t.Cleanup(func() {
+				os.Clearenv()
+			})
+
 			tc.given()
 
 			expected := &DBEnv{}

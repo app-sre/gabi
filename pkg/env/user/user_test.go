@@ -29,9 +29,8 @@ func TestPopulate(t *testing.T) {
 		{
 			"not using configuration file",
 			func() string {
-				os.Clearenv()
-				os.Setenv("EXPIRATION_DATE", "2023-01-01")
-				os.Setenv("AUTHORIZED_USERS", "test")
+				t.Setenv("EXPIRATION_DATE", "2023-01-01")
+				t.Setenv("AUTHORIZED_USERS", "test")
 				return ""
 			},
 			&UserEnv{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), Users: []string{"test"}},
@@ -41,7 +40,6 @@ func TestPopulate(t *testing.T) {
 		{
 			"not using configuration file with no environment variables set",
 			func() string {
-				os.Clearenv()
 				return ""
 			},
 			&UserEnv{},
@@ -51,8 +49,7 @@ func TestPopulate(t *testing.T) {
 		{
 			"not using configuration file with invalid expiration date",
 			func() string {
-				os.Clearenv()
-				os.Setenv("EXPIRATION_DATE", "test")
+				t.Setenv("EXPIRATION_DATE", "test")
 				return ""
 			},
 			&UserEnv{},
@@ -62,8 +59,7 @@ func TestPopulate(t *testing.T) {
 		{
 			"not using configuration file with expiration date and no users set",
 			func() string {
-				os.Clearenv()
-				os.Setenv("EXPIRATION_DATE", "2023-01-01")
+				t.Setenv("EXPIRATION_DATE", "2023-01-01")
 				return ""
 			},
 			&UserEnv{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
@@ -73,9 +69,8 @@ func TestPopulate(t *testing.T) {
 		{
 			"not using configuration file with expiration date and empty users set",
 			func() string {
-				os.Clearenv()
-				os.Setenv("EXPIRATION_DATE", "2023-01-01")
-				os.Setenv("AUTHORIZED_USERS", "")
+				t.Setenv("EXPIRATION_DATE", "2023-01-01")
+				t.Setenv("AUTHORIZED_USERS", "")
 				return ""
 			},
 			&UserEnv{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
@@ -85,7 +80,6 @@ func TestPopulate(t *testing.T) {
 		{
 			"using configuration file with expiration date and empty users set",
 			func() string {
-				os.Clearenv()
 				file, err := os.CreateTemp("", "user-")
 				if err != nil {
 					t.Fatal(err)
@@ -94,7 +88,7 @@ func TestPopulate(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				os.Setenv("CONFIG_FILE_PATH", file.Name())
+				t.Setenv("CONFIG_FILE_PATH", file.Name())
 				return file.Name()
 			},
 			&UserEnv{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
@@ -104,7 +98,6 @@ func TestPopulate(t *testing.T) {
 		{
 			"using configuration file with expiration date and users set",
 			func() string {
-				os.Clearenv()
 				file, err := os.CreateTemp("", "user-")
 				if err != nil {
 					t.Fatal(err)
@@ -113,7 +106,7 @@ func TestPopulate(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				os.Setenv("CONFIG_FILE_PATH", file.Name())
+				t.Setenv("CONFIG_FILE_PATH", file.Name())
 				return file.Name()
 			},
 			&UserEnv{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), Users: []string{"test"}},
@@ -123,7 +116,6 @@ func TestPopulate(t *testing.T) {
 		{
 			"using configuration file and environment variables with expiration date and users set",
 			func() string {
-				os.Clearenv()
 				file, err := os.CreateTemp("", "user-")
 				if err != nil {
 					t.Fatal(err)
@@ -132,8 +124,8 @@ func TestPopulate(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				os.Setenv("CONFIG_FILE_PATH", file.Name())
-				os.Setenv("AUTHORIZED_USERS", "test2")
+				t.Setenv("CONFIG_FILE_PATH", file.Name())
+				t.Setenv("AUTHORIZED_USERS", "test2")
 				return file.Name()
 			},
 			&UserEnv{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), Users: []string{"test2"}},
@@ -143,7 +135,6 @@ func TestPopulate(t *testing.T) {
 		{
 			"legacy users file support",
 			func() string {
-				os.Clearenv()
 				file, err := os.CreateTemp("", "user-")
 				if err != nil {
 					t.Fatal(err)
@@ -152,7 +143,7 @@ func TestPopulate(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				os.Setenv("USERS_FILE_PATH", file.Name())
+				t.Setenv("USERS_FILE_PATH", file.Name())
 				return file.Name()
 			},
 			&UserEnv{Users: []string{"test"}},
@@ -162,12 +153,11 @@ func TestPopulate(t *testing.T) {
 		{
 			"empty legacy users file support",
 			func() string {
-				os.Clearenv()
 				file, err := os.CreateTemp("", "user-")
 				if err != nil {
 					t.Fatal(err)
 				}
-				os.Setenv("USERS_FILE_PATH", file.Name())
+				t.Setenv("USERS_FILE_PATH", file.Name())
 				return file.Name()
 			},
 			&UserEnv{},
@@ -177,8 +167,7 @@ func TestPopulate(t *testing.T) {
 		{
 			"invalid configuration file",
 			func() string {
-				os.Clearenv()
-				os.Setenv("CONFIG_FILE_PATH", "test")
+				t.Setenv("CONFIG_FILE_PATH", "test")
 				return ""
 			},
 			&UserEnv{},
@@ -188,8 +177,7 @@ func TestPopulate(t *testing.T) {
 		{
 			"invalid legacy users file",
 			func() string {
-				os.Clearenv()
-				os.Setenv("USERS_FILE_PATH", "test")
+				t.Setenv("USERS_FILE_PATH", "test")
 				return ""
 			},
 			&UserEnv{},
@@ -199,7 +187,6 @@ func TestPopulate(t *testing.T) {
 		{
 			"invalid configuration file JSON content",
 			func() string {
-				os.Clearenv()
 				file, err := os.CreateTemp("", "user-")
 				if err != nil {
 					t.Fatal(err)
@@ -208,7 +195,7 @@ func TestPopulate(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				os.Setenv("CONFIG_FILE_PATH", file.Name())
+				t.Setenv("CONFIG_FILE_PATH", file.Name())
 				return file.Name()
 			},
 			&UserEnv{},
@@ -220,7 +207,11 @@ func TestPopulate(t *testing.T) {
 	for _, tc := range cases {
 		tc := tc
 		t.Run(tc.description, func(t *testing.T) {
-			defer os.Remove(tc.given())
+			file := tc.given()
+			t.Cleanup(func() {
+				os.Clearenv()
+				os.Remove(file)
+			})
 
 			actual := &UserEnv{}
 			err := actual.Populate()
