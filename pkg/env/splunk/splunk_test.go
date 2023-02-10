@@ -5,12 +5,15 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewSplunkEnv(t *testing.T) {
+	t.Parallel()
+
 	actual := NewSplunkEnv()
 
-	assert.NotNil(t, actual)
+	require.NotNil(t, actual)
 	assert.IsType(t, &SplunkEnv{}, actual)
 }
 
@@ -18,14 +21,14 @@ func TestPopulate(t *testing.T) {
 	cases := []struct {
 		description string
 		given       func()
-		clean       func()
 		expected    *SplunkEnv
 		error       bool
-		message     string
+		want        string
 	}{
 		{
 			"all environment variables set",
 			func() {
+				os.Clearenv()
 				os.Setenv("SPLUNK_INDEX", "test")
 				os.Setenv("SPLUNK_ENDPOINT", "test")
 				os.Setenv("SPLUNK_TOKEN", "test123")
@@ -33,7 +36,6 @@ func TestPopulate(t *testing.T) {
 				os.Setenv("NAMESPACE", "test")
 				os.Setenv("POD_NAME", "test")
 			},
-			os.Clearenv,
 			&SplunkEnv{Index: "test", Endpoint: "test", Token: "test123", Host: "test", Namespace: "test", Pod: "test"},
 			false,
 			``,
@@ -41,9 +43,8 @@ func TestPopulate(t *testing.T) {
 		{
 			"missing required SPLUNK_INDEX environment variable",
 			func() {
-				// No-op.
+				os.Clearenv()
 			},
-			os.Clearenv,
 			&SplunkEnv{},
 			true,
 			`unable to access environment variable: SPLUNK_INDEX`,
@@ -51,9 +52,9 @@ func TestPopulate(t *testing.T) {
 		{
 			"empty required SPLUNK_INDEX environment variable",
 			func() {
+				os.Clearenv()
 				os.Setenv("SPLUNK_INDEX", "")
 			},
-			os.Clearenv,
 			&SplunkEnv{},
 			true,
 			`unable to access environment variable: SPLUNK_INDEX`,
@@ -61,9 +62,9 @@ func TestPopulate(t *testing.T) {
 		{
 			"missing required SPLUNK_ENDPOINT environment variable",
 			func() {
+				os.Clearenv()
 				os.Setenv("SPLUNK_INDEX", "test")
 			},
-			os.Clearenv,
 			&SplunkEnv{Index: "test"},
 			true,
 			`unable to access environment variable: SPLUNK_ENDPOINT`,
@@ -71,10 +72,10 @@ func TestPopulate(t *testing.T) {
 		{
 			"missing required SPLUNK_TOKEN environment variable",
 			func() {
+				os.Clearenv()
 				os.Setenv("SPLUNK_INDEX", "test")
 				os.Setenv("SPLUNK_ENDPOINT", "test")
 			},
-			os.Clearenv,
 			&SplunkEnv{Index: "test", Endpoint: "test", Token: "", Host: "", Namespace: "", Pod: ""},
 			true,
 			`unable to access environment variable: SPLUNK_TOKEN`,
@@ -82,11 +83,11 @@ func TestPopulate(t *testing.T) {
 		{
 			"missing required HOST environment variable",
 			func() {
+				os.Clearenv()
 				os.Setenv("SPLUNK_INDEX", "test")
 				os.Setenv("SPLUNK_ENDPOINT", "test")
 				os.Setenv("SPLUNK_TOKEN", "test123")
 			},
-			os.Clearenv,
 			&SplunkEnv{Index: "test", Endpoint: "test", Token: "test123", Host: "", Namespace: "", Pod: ""},
 			true,
 			`unable to access environment variable: HOST`,
@@ -94,12 +95,12 @@ func TestPopulate(t *testing.T) {
 		{
 			"missing required NAMESPACE environment variable",
 			func() {
+				os.Clearenv()
 				os.Setenv("SPLUNK_INDEX", "test")
 				os.Setenv("SPLUNK_ENDPOINT", "test")
 				os.Setenv("SPLUNK_TOKEN", "test123")
 				os.Setenv("HOST", "test")
 			},
-			os.Clearenv,
 			&SplunkEnv{Index: "test", Endpoint: "test", Token: "test123", Host: "test", Namespace: "", Pod: ""},
 			true,
 			`unable to access environment variable: NAMESPACE`,
@@ -107,13 +108,13 @@ func TestPopulate(t *testing.T) {
 		{
 			"missing required POD_NAME environment variable",
 			func() {
+				os.Clearenv()
 				os.Setenv("SPLUNK_INDEX", "test")
 				os.Setenv("SPLUNK_ENDPOINT", "test")
 				os.Setenv("SPLUNK_TOKEN", "test123")
 				os.Setenv("HOST", "test")
 				os.Setenv("NAMESPACE", "test")
 			},
-			os.Clearenv,
 			&SplunkEnv{Index: "test", Endpoint: "test", Token: "test123", Host: "test", Namespace: "test", Pod: ""},
 			true,
 			`unable to access environment variable: POD_NAME`,
@@ -123,17 +124,16 @@ func TestPopulate(t *testing.T) {
 	for _, tc := range cases {
 		tc := tc
 		t.Run(tc.description, func(t *testing.T) {
-			tc.clean()
-
 			tc.given()
+
 			actual := &SplunkEnv{}
 			err := actual.Populate()
 
 			if tc.error {
-				assert.NotNil(t, err)
-				assert.Contains(t, err.Error(), tc.message)
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tc.want)
 			} else {
-				assert.Nil(t, err)
+				require.NoError(t, err)
 			}
 
 			assert.Equal(t, tc.expected, actual)

@@ -15,6 +15,8 @@ import (
 )
 
 func TestExpiration(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		description string
 		given       *user.UserEnv
@@ -55,8 +57,8 @@ func TestExpiration(t *testing.T) {
 
 			logger := test.DummyLogger(io.Discard).Sugar()
 
-			aux := &gabi.Env{Logger: logger, UserEnv: tc.given}
-			Expiration(aux)(dummyHandler).ServeHTTP(w, r)
+			expected := &gabi.Env{Logger: logger, UserEnv: tc.given}
+			Expiration(expected)(dummyHandler).ServeHTTP(w, r)
 
 			actual := w.Result()
 			defer func() { _ = actual.Body.Close() }()

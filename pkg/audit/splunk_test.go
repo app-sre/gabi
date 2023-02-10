@@ -13,37 +13,40 @@ import (
 	"github.com/app-sre/gabi/pkg/env/splunk"
 	"github.com/app-sre/gabi/pkg/version"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewSplunkAudit(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		description string
-		expected    *splunk.SplunkEnv
 		given       Option
+		want        *splunk.SplunkEnv
 		option      bool
 	}{
 		{
 			"using option that updates internal state",
-			&splunk.SplunkEnv{Index: "test"},
 			func(s *SplunkAudit) {
 				s.SplunkEnv.Index = "test"
 			},
+			&splunk.SplunkEnv{Index: "test"},
 			true,
 		},
 		{
 			"using option that does nothing",
-			&splunk.SplunkEnv{},
 			func(s *SplunkAudit) {
 				// No-op.
 			},
+			&splunk.SplunkEnv{},
 			true,
 		},
 		{
 			"without using any options",
-			&splunk.SplunkEnv{},
 			func(s *SplunkAudit) {
 				// No-op.
 			},
+			&splunk.SplunkEnv{},
 			false,
 		},
 	}
@@ -61,14 +64,16 @@ func TestNewSplunkAudit(t *testing.T) {
 				actual = NewSplunkAudit(&splunk.SplunkEnv{})
 			}
 
-			assert.NotNil(t, actual)
+			require.NotNil(t, actual)
 			assert.IsType(t, &SplunkAudit{}, actual)
-			assert.Equal(t, tc.expected, actual.SplunkEnv)
+			assert.Equal(t, tc.want, actual.SplunkEnv)
 		})
 	}
 }
 
 func TestWithHTTPClient(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		description string
 		given       []Option
@@ -91,23 +96,25 @@ func TestWithHTTPClient(t *testing.T) {
 		t.Run(tc.description, func(t *testing.T) {
 			t.Parallel()
 
-			aux := NewSplunkAudit(&splunk.SplunkEnv{}, tc.given...)
+			actual := NewSplunkAudit(&splunk.SplunkEnv{}, tc.given...)
 
-			actual := aux.client
+			require.NotNil(t, actual)
 
+			want := actual.client
 			if tc.defaults {
-				assert.NotNil(t, actual.Transport)
+				assert.NotNil(t, want.Transport)
 			} else {
-				assert.Nil(t, actual.Transport)
+				assert.Nil(t, want.Transport)
 			}
 
-			assert.NotNil(t, aux)
-			assert.IsType(t, &SplunkAudit{}, aux)
+			assert.IsType(t, &SplunkAudit{}, actual)
 		})
 	}
 }
 
 func TestSetHTTPClient(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		description string
 		given       func(*SplunkAudit)
@@ -134,25 +141,26 @@ func TestSetHTTPClient(t *testing.T) {
 		t.Run(tc.description, func(t *testing.T) {
 			t.Parallel()
 
-			aux := NewSplunkAudit(&splunk.SplunkEnv{})
-			tc.given(aux)
+			actual := NewSplunkAudit(&splunk.SplunkEnv{})
+			tc.given(actual)
 
-			actual := aux.client
+			require.NotNil(t, actual)
 
+			want := actual.client
 			if tc.defaults {
-				assert.NotNil(t, actual.Transport)
+				assert.NotNil(t, want.Transport)
 			} else {
-				assert.Nil(t, actual.Transport)
+				assert.Nil(t, want.Transport)
 			}
 
-			assert.NotNil(t, aux)
-			assert.NotNil(t, actual)
-			assert.IsType(t, &SplunkAudit{}, aux)
+			assert.IsType(t, &SplunkAudit{}, actual)
 		})
 	}
 }
 
 func TestSplunkAduitWrite(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		description string
 		given       QueryData
@@ -161,7 +169,7 @@ func TestSplunkAduitWrite(t *testing.T) {
 		handler     func(*bytes.Buffer, *http.Header) func(w http.ResponseWriter, r *http.Request)
 		error       bool
 		message     string
-		output      *regexp.Regexp
+		want        *regexp.Regexp
 	}{
 		{
 			"valid query",
@@ -426,14 +434,14 @@ func TestSplunkAduitWrite(t *testing.T) {
 			err := actual.Write(&tc.given)
 
 			if tc.error {
-				assert.NotNil(t, err)
+				require.Error(t, err)
 				assert.Contains(t, err.Error(), tc.message)
 			} else {
-				assert.Nil(t, err)
+				require.NoError(t, err)
 			}
 
 			assert.Equal(t, tc.headers(), &headers)
-			assert.Regexp(t, tc.output, server.String())
+			assert.Regexp(t, tc.want, server.String())
 		})
 	}
 }

@@ -14,6 +14,8 @@ import (
 )
 
 func TestAuthorization(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		description string
 		given       *user.UserEnv
@@ -111,8 +113,8 @@ func TestAuthorization(t *testing.T) {
 
 			tc.headers(r)
 
-			aux := &gabi.Env{Logger: logger, UserEnv: tc.given}
-			Authorization(aux)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			expected := &gabi.Env{Logger: logger, UserEnv: tc.given}
+			Authorization(expected)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				s, ok := r.Context().Value(contextUserKey).(string)
 				if !ok {
 					t.Fatal("invalid context")

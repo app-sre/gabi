@@ -6,12 +6,15 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewUserEnv(t *testing.T) {
+	t.Parallel()
+
 	actual := NewUserEnv()
 
-	assert.NotNil(t, actual)
+	require.NotNil(t, actual)
 	assert.IsType(t, &UserEnv{}, actual)
 }
 
@@ -19,19 +22,18 @@ func TestPopulate(t *testing.T) {
 	cases := []struct {
 		description string
 		given       func() string
-		clean       func()
 		expected    *UserEnv
 		error       bool
-		message     string
+		want        string
 	}{
 		{
 			"not using configuration file",
 			func() string {
+				os.Clearenv()
 				os.Setenv("EXPIRATION_DATE", "2023-01-01")
 				os.Setenv("AUTHORIZED_USERS", "test")
 				return ""
 			},
-			os.Clearenv,
 			&UserEnv{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), Users: []string{"test"}},
 			false,
 			``,
@@ -39,10 +41,9 @@ func TestPopulate(t *testing.T) {
 		{
 			"not using configuration file with no environment variables set",
 			func() string {
-				// No-op.
+				os.Clearenv()
 				return ""
 			},
-			os.Clearenv,
 			&UserEnv{},
 			true,
 			`unable to access environment variable: EXPIRATION_DATE`,
@@ -50,10 +51,10 @@ func TestPopulate(t *testing.T) {
 		{
 			"not using configuration file with invalid expiration date",
 			func() string {
+				os.Clearenv()
 				os.Setenv("EXPIRATION_DATE", "test")
 				return ""
 			},
-			os.Clearenv,
 			&UserEnv{},
 			true,
 			`unable to parse expiration date`,
@@ -61,10 +62,10 @@ func TestPopulate(t *testing.T) {
 		{
 			"not using configuration file with expiration date and no users set",
 			func() string {
+				os.Clearenv()
 				os.Setenv("EXPIRATION_DATE", "2023-01-01")
 				return ""
 			},
-			os.Clearenv,
 			&UserEnv{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
 			false,
 			``,
@@ -72,11 +73,11 @@ func TestPopulate(t *testing.T) {
 		{
 			"not using configuration file with expiration date and empty users set",
 			func() string {
+				os.Clearenv()
 				os.Setenv("EXPIRATION_DATE", "2023-01-01")
 				os.Setenv("AUTHORIZED_USERS", "")
 				return ""
 			},
-			os.Clearenv,
 			&UserEnv{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
 			false,
 			``,
@@ -84,6 +85,7 @@ func TestPopulate(t *testing.T) {
 		{
 			"using configuration file with expiration date and empty users set",
 			func() string {
+				os.Clearenv()
 				file, err := os.CreateTemp("", "user-")
 				if err != nil {
 					t.Fatal(err)
@@ -95,7 +97,6 @@ func TestPopulate(t *testing.T) {
 				os.Setenv("CONFIG_FILE_PATH", file.Name())
 				return file.Name()
 			},
-			os.Clearenv,
 			&UserEnv{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
 			false,
 			``,
@@ -103,6 +104,7 @@ func TestPopulate(t *testing.T) {
 		{
 			"using configuration file with expiration date and users set",
 			func() string {
+				os.Clearenv()
 				file, err := os.CreateTemp("", "user-")
 				if err != nil {
 					t.Fatal(err)
@@ -114,7 +116,6 @@ func TestPopulate(t *testing.T) {
 				os.Setenv("CONFIG_FILE_PATH", file.Name())
 				return file.Name()
 			},
-			os.Clearenv,
 			&UserEnv{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), Users: []string{"test"}},
 			false,
 			``,
@@ -122,6 +123,7 @@ func TestPopulate(t *testing.T) {
 		{
 			"using configuration file and environment variables with expiration date and users set",
 			func() string {
+				os.Clearenv()
 				file, err := os.CreateTemp("", "user-")
 				if err != nil {
 					t.Fatal(err)
@@ -134,7 +136,6 @@ func TestPopulate(t *testing.T) {
 				os.Setenv("AUTHORIZED_USERS", "test2")
 				return file.Name()
 			},
-			os.Clearenv,
 			&UserEnv{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), Users: []string{"test2"}},
 			false,
 			``,
@@ -142,6 +143,7 @@ func TestPopulate(t *testing.T) {
 		{
 			"legacy users file support",
 			func() string {
+				os.Clearenv()
 				file, err := os.CreateTemp("", "user-")
 				if err != nil {
 					t.Fatal(err)
@@ -153,7 +155,6 @@ func TestPopulate(t *testing.T) {
 				os.Setenv("USERS_FILE_PATH", file.Name())
 				return file.Name()
 			},
-			os.Clearenv,
 			&UserEnv{Users: []string{"test"}},
 			false,
 			``,
@@ -161,6 +162,7 @@ func TestPopulate(t *testing.T) {
 		{
 			"empty legacy users file support",
 			func() string {
+				os.Clearenv()
 				file, err := os.CreateTemp("", "user-")
 				if err != nil {
 					t.Fatal(err)
@@ -168,7 +170,6 @@ func TestPopulate(t *testing.T) {
 				os.Setenv("USERS_FILE_PATH", file.Name())
 				return file.Name()
 			},
-			os.Clearenv,
 			&UserEnv{},
 			false,
 			``,
@@ -176,10 +177,10 @@ func TestPopulate(t *testing.T) {
 		{
 			"invalid configuration file",
 			func() string {
+				os.Clearenv()
 				os.Setenv("CONFIG_FILE_PATH", "test")
 				return ""
 			},
-			os.Clearenv,
 			&UserEnv{},
 			true,
 			`unable to read users file: open test`,
@@ -187,10 +188,10 @@ func TestPopulate(t *testing.T) {
 		{
 			"invalid legacy users file",
 			func() string {
+				os.Clearenv()
 				os.Setenv("USERS_FILE_PATH", "test")
 				return ""
 			},
-			os.Clearenv,
 			&UserEnv{},
 			true,
 			`unable to read users file`,
@@ -198,6 +199,7 @@ func TestPopulate(t *testing.T) {
 		{
 			"invalid configuration file JSON content",
 			func() string {
+				os.Clearenv()
 				file, err := os.CreateTemp("", "user-")
 				if err != nil {
 					t.Fatal(err)
@@ -209,7 +211,6 @@ func TestPopulate(t *testing.T) {
 				os.Setenv("CONFIG_FILE_PATH", file.Name())
 				return file.Name()
 			},
-			os.Clearenv,
 			&UserEnv{},
 			true,
 			`unable to unmarshal users file`,
@@ -219,17 +220,16 @@ func TestPopulate(t *testing.T) {
 	for _, tc := range cases {
 		tc := tc
 		t.Run(tc.description, func(t *testing.T) {
-			tc.clean()
 			defer os.Remove(tc.given())
 
 			actual := &UserEnv{}
 			err := actual.Populate()
 
 			if tc.error {
-				assert.NotNil(t, err)
-				assert.Contains(t, err.Error(), tc.message)
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tc.want)
 			} else {
-				assert.Nil(t, err)
+				require.NoError(t, err)
 			}
 
 			assert.Equal(t, tc.expected, actual)
@@ -238,6 +238,8 @@ func TestPopulate(t *testing.T) {
 }
 
 func TestIsDeprecated(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		description string
 		given       UserEnv
@@ -273,6 +275,8 @@ func TestIsDeprecated(t *testing.T) {
 }
 
 func TestIsExpired(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		description string
 		given       UserEnv
@@ -308,6 +312,8 @@ func TestIsExpired(t *testing.T) {
 }
 
 func TestMarshalJSON(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		description string
 		given       UserEnv
@@ -367,19 +373,21 @@ func TestMarshalJSON(t *testing.T) {
 
 			results, err := tc.given.MarshalJSON()
 
-			assert.Nil(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, tc.expected, string(results))
 		})
 	}
 }
 
 func TestUnmarshalJSON(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		description string
 		given       string
 		expected    UserEnv
 		error       bool
-		message     string
+		want        string
 	}{
 		{
 			"valid JSON with users and expiration date",
@@ -476,10 +484,10 @@ func TestUnmarshalJSON(t *testing.T) {
 			err := results.UnmarshalJSON([]byte(tc.given))
 
 			if tc.error {
-				assert.NotNil(t, err)
-				assert.Contains(t, err.Error(), tc.message)
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tc.want)
 			} else {
-				assert.Nil(t, err)
+				require.NoError(t, err)
 			}
 
 			assert.Equal(t, tc.expected, results)

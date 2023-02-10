@@ -4,13 +4,16 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDriveType(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		description string
 		given       string
-		name        string
+		want        string
 		port        int
 		format      string
 		valid       bool

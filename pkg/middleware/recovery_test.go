@@ -13,12 +13,14 @@ import (
 )
 
 func TestRecovery(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		description string
 		given       http.HandlerFunc
 		code        int
 		error       bool
-		message     string
+		want        string
 	}{
 		{
 			"no panic",
@@ -56,18 +58,15 @@ func TestRecovery(t *testing.T) {
 
 			defer func() { _ = recover() }()
 
-			var (
-				body   bytes.Buffer
-				output bytes.Buffer
-			)
+			var body, output bytes.Buffer
 
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest(http.MethodGet, "/", &bytes.Buffer{})
 
 			logger := test.DummyLogger(&output).Sugar()
 
-			aux := &gabi.Env{Logger: logger}
-			Recovery(aux)(tc.given).ServeHTTP(w, r)
+			expected := &gabi.Env{Logger: logger}
+			Recovery(expected)(tc.given).ServeHTTP(w, r)
 
 			actual := w.Result()
 			defer func() { _ = actual.Body.Close() }()
@@ -75,7 +74,7 @@ func TestRecovery(t *testing.T) {
 			_, _ = io.Copy(&body, actual.Body)
 
 			assert.Equal(t, tc.code, actual.StatusCode)
-			assert.Contains(t, output.String(), tc.message)
+			assert.Contains(t, output.String(), tc.want)
 
 			if tc.error {
 				t.Fatal("did not panic")

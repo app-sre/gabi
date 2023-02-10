@@ -12,9 +12,12 @@ import (
 	"github.com/app-sre/gabi/internal/test"
 	gabi "github.com/app-sre/gabi/pkg"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestHealthcheck(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		description string
 		given       func(sqlmock.Sqlmock)
@@ -56,8 +59,8 @@ func TestHealthcheck(t *testing.T) {
 
 			tc.given(mock)
 
-			aux := &gabi.Env{DB: db, Logger: logger}
-			Healthcheck(aux).ServeHTTP(w, r)
+			expected := &gabi.Env{DB: db, Logger: logger}
+			Healthcheck(expected).ServeHTTP(w, r)
 
 			actual := w.Result()
 			defer func() { _ = actual.Body.Close() }()
@@ -66,7 +69,7 @@ func TestHealthcheck(t *testing.T) {
 
 			err := mock.ExpectationsWereMet()
 
-			assert.Nil(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, tc.code, actual.StatusCode)
 			assert.Contains(t, body.String(), tc.body)
 		})

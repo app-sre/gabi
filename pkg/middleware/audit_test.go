@@ -18,6 +18,8 @@ import (
 )
 
 func TestAudit(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		description string
 		given       func(*httptest.Server) *splunk.SplunkEnv
@@ -28,7 +30,7 @@ func TestAudit(t *testing.T) {
 		code        int
 		body        string
 		response    string
-		output      *regexp.Regexp
+		want        *regexp.Regexp
 	}{
 		{
 			"valid query",
@@ -381,8 +383,8 @@ func TestAudit(t *testing.T) {
 
 			tc.headers(tc.request())(r)
 
-			aux := &gabi.Env{LoggerAudit: la, SplunkAudit: sa, Logger: logger}
-			Audit(aux)(dummyHandler).ServeHTTP(w, r.WithContext(tc.context()))
+			expected := &gabi.Env{LoggerAudit: la, SplunkAudit: sa, Logger: logger}
+			Audit(expected)(dummyHandler).ServeHTTP(w, r.WithContext(tc.context()))
 
 			actual := w.Result()
 			defer func() { _ = actual.Body.Close() }()
@@ -392,7 +394,7 @@ func TestAudit(t *testing.T) {
 			assert.Equal(t, tc.code, actual.StatusCode)
 			assert.Contains(t, client.String(), tc.body)
 			assert.Contains(t, server.String(), tc.response)
-			assert.Regexp(t, tc.output, output.String())
+			assert.Regexp(t, tc.want, output.String())
 		})
 	}
 }

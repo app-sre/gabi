@@ -15,9 +15,12 @@ import (
 	gabidb "github.com/app-sre/gabi/pkg/env/db"
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestQuery(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		description string
 		database    func() (*sql.DB, sqlmock.Sqlmock)
@@ -25,7 +28,7 @@ func TestQuery(t *testing.T) {
 		request     func() *bytes.Buffer
 		code        int
 		body        string
-		output      string
+		want        string
 	}{
 		{
 			"valid query",
@@ -241,8 +244,8 @@ func TestQuery(t *testing.T) {
 
 			tc.mock(mock)
 
-			aux := &gabi.Env{DB: db, Logger: logger, DBEnv: &gabidb.DBEnv{}}
-			Query(aux).ServeHTTP(w, r)
+			expected := &gabi.Env{DB: db, Logger: logger, DBEnv: &gabidb.DBEnv{}}
+			Query(expected).ServeHTTP(w, r)
 
 			actual := w.Result()
 			defer func() { _ = actual.Body.Close() }()
@@ -251,10 +254,10 @@ func TestQuery(t *testing.T) {
 
 			err := mock.ExpectationsWereMet()
 
-			assert.Nil(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, tc.code, actual.StatusCode)
 			assert.Contains(t, body.String(), tc.body)
-			assert.Contains(t, output.String(), tc.output)
+			assert.Contains(t, output.String(), tc.want)
 		})
 	}
 }

@@ -9,22 +9,26 @@ import (
 
 	"github.com/app-sre/gabi/internal/test"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewLoggerAudit(t *testing.T) {
-	logger := test.DummyLogger(io.Discard).Sugar()
+	t.Parallel()
 
+	logger := test.DummyLogger(io.Discard).Sugar()
 	actual := NewLoggerAudit(logger)
 
-	assert.NotNil(t, actual)
+	require.NotNil(t, actual)
 	assert.IsType(t, &LoggerAudit{}, actual)
 }
 
 func TestLoggingAuditWrite(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		description string
 		given       QueryData
-		output      *regexp.Regexp
+		want        *regexp.Regexp
 	}{
 		{
 			"query data with all fields set",
@@ -55,8 +59,8 @@ func TestLoggingAuditWrite(t *testing.T) {
 			audit := &LoggerAudit{Logger: logger}
 			err := audit.Write(&tc.given)
 
-			assert.Nil(t, err)
-			assert.Regexp(t, tc.output, output.String())
+			require.NoError(t, err)
+			assert.Regexp(t, tc.want, output.String())
 		})
 	}
 }
