@@ -75,11 +75,11 @@ func TestDriveType(t *testing.T) {
 
 			actual := DriverType(tc.given)
 
-			assert.Equal(t, tc.name, actual.Name())
+			require.Equal(t, tc.want, actual.String())
+
 			assert.Equal(t, tc.port, actual.Port())
 			assert.Equal(t, tc.format, actual.Format())
 			assert.Equal(t, tc.valid, actual.IsValid())
-			assert.Equal(t, actual.Name(), actual.String())
 		})
 	}
 }

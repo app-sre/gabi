@@ -59,7 +59,7 @@ func Run(logger *zap.SugaredLogger) error {
 	}
 	logger.Infof("Using database driver: %s (write access: %t)", dbe.Driver, dbe.AllowWrite)
 
-	db, err := sql.Open(dbe.Driver.Name(), dbe.ConnectionDSN())
+	db, err := sql.Open(dbe.Driver.String(), dbe.ConnectionDSN())
 	if err != nil {
 		return fmt.Errorf("unable to open database connection: %w", err)
 	}

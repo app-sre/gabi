@@ -14,22 +14,11 @@ const (
 type DriverType string
 
 func (t DriverType) String() string {
-	return t.Name()
-}
-
-func (t DriverType) Name() string {
-	switch t {
-	case "mysql":
-		return driverMySQL
-	case "postgresql", "postgres", "pgx":
-		return driverPostgreSQL
-	default:
-		return ""
-	}
+	return string(t.driver())
 }
 
 func (t DriverType) Port() int {
-	switch t.Name() {
+	switch t.driver() {
 	case driverMySQL:
 		return driverMySQLPort
 	case driverPostgreSQL:
@@ -40,7 +29,7 @@ func (t DriverType) Port() int {
 }
 
 func (t DriverType) Format() string {
-	switch t.Name() {
+	switch t.driver() {
 	case driverMySQL:
 		return driverMySQLFormat
 	case driverPostgreSQL:
@@ -60,4 +49,17 @@ func (t DriverType) IsValid() bool {
 	_, ok := types[string(t)]
 
 	return ok
+}
+
+func (t DriverType) driver() DriverType {
+	switch t {
+	case "mysql":
+		t = driverMySQL
+	case "postgresql", "postgres", "pgx":
+		t = driverPostgreSQL
+	default:
+		t = ""
+	}
+
+	return t
 }
