@@ -2,6 +2,7 @@ package gabi
 
 import (
 	"database/sql"
+	"os"
 
 	"github.com/app-sre/gabi/pkg/audit"
 	"github.com/app-sre/gabi/pkg/env/db"
@@ -16,4 +17,8 @@ type Env struct {
 	LoggerAudit *audit.LoggerAudit
 	SplunkAudit *audit.SplunkAudit
 	Logger      *zap.SugaredLogger
+}
+
+func Production() bool {
+	return os.Getenv("ENVIRONMENT") == "production"
 }

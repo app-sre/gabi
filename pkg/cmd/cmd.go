@@ -7,7 +7,6 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"os"
 	"strconv"
 	"time"
 
@@ -33,7 +32,6 @@ const (
 )
 
 func Run(logger *zap.SugaredLogger) error {
-	production := os.Getenv("ENVIRONMENT") == "production"
 	logger.Infof("Starting GABI version: %s", version.Version())
 
 	usere := user.NewUserEnv()
@@ -49,7 +47,7 @@ func Run(logger *zap.SugaredLogger) error {
 		date = "UNKNOWN"
 	}
 
-	logger.Infof("Production: %t, expired: %t (expiration date: %s)", production, expiry, date)
+	logger.Infof("Production: %t, expired: %t (expiration date: %s)", gabi.Production(), expiry, date)
 	logger.Debugf("Authorized users: %v", usere.Users)
 
 	dbe := db.NewDBEnv()
@@ -90,7 +88,7 @@ func Run(logger *zap.SugaredLogger) error {
 	defaultLogOutput := log.Default().Writer()
 
 	healthLogOutput := io.Discard
-	if !production {
+	if !gabi.Production() {
 		healthLogOutput = defaultLogOutput
 	}
 	logHandler := gorillaHandlers.LoggingHandler
