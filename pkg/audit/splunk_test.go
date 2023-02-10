@@ -292,6 +292,26 @@ func TestSplunkAduitWrite(t *testing.T) {
 			},
 			func(s *httptest.Server) *splunk.SplunkEnv {
 				return &splunk.SplunkEnv{
+					Endpoint: "http://test/%",
+				}
+			},
+			func(b *bytes.Buffer, h *http.Header) func(w http.ResponseWriter, r *http.Request) {
+				return func(w http.ResponseWriter, r *http.Request) {
+					// No-op.
+				}
+			},
+			true,
+			`unable to create request to Splunk`,
+			regexp.MustCompile(``),
+		},
+		{
+			"valid query with unreachable Splunk endpoint configured",
+			QueryData{Query: "select 1;", User: "test", Timestamp: time.Now().Unix()},
+			func() *http.Header {
+				return &http.Header{}
+			},
+			func(s *httptest.Server) *splunk.SplunkEnv {
+				return &splunk.SplunkEnv{
 					Endpoint: "http://test",
 				}
 			},
