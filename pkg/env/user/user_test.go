@@ -15,14 +15,14 @@ func TestNewUserEnv(t *testing.T) {
 	actual := NewUserEnv()
 
 	require.NotNil(t, actual)
-	assert.IsType(t, &UserEnv{}, actual)
+	assert.IsType(t, &Env{}, actual)
 }
 
 func TestPopulate(t *testing.T) {
 	cases := []struct {
 		description string
 		given       func() string
-		expected    *UserEnv
+		expected    *Env
 		error       bool
 		want        string
 	}{
@@ -33,7 +33,7 @@ func TestPopulate(t *testing.T) {
 				t.Setenv("AUTHORIZED_USERS", "test")
 				return ""
 			},
-			&UserEnv{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), Users: []string{"test"}},
+			&Env{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), Users: []string{"test"}},
 			false,
 			``,
 		},
@@ -42,7 +42,7 @@ func TestPopulate(t *testing.T) {
 			func() string {
 				return ""
 			},
-			&UserEnv{},
+			&Env{},
 			true,
 			`unable to access environment variable: EXPIRATION_DATE`,
 		},
@@ -52,7 +52,7 @@ func TestPopulate(t *testing.T) {
 				t.Setenv("EXPIRATION_DATE", "test")
 				return ""
 			},
-			&UserEnv{},
+			&Env{},
 			true,
 			`unable to parse expiration date`,
 		},
@@ -62,7 +62,7 @@ func TestPopulate(t *testing.T) {
 				t.Setenv("EXPIRATION_DATE", "2023-01-01")
 				return ""
 			},
-			&UserEnv{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
+			&Env{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
 			false,
 			``,
 		},
@@ -73,7 +73,7 @@ func TestPopulate(t *testing.T) {
 				t.Setenv("AUTHORIZED_USERS", "")
 				return ""
 			},
-			&UserEnv{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
+			&Env{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
 			false,
 			``,
 		},
@@ -91,7 +91,7 @@ func TestPopulate(t *testing.T) {
 				t.Setenv("CONFIG_FILE_PATH", file.Name())
 				return file.Name()
 			},
-			&UserEnv{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
+			&Env{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
 			false,
 			``,
 		},
@@ -109,7 +109,7 @@ func TestPopulate(t *testing.T) {
 				t.Setenv("CONFIG_FILE_PATH", file.Name())
 				return file.Name()
 			},
-			&UserEnv{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), Users: []string{"test"}},
+			&Env{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), Users: []string{"test"}},
 			false,
 			``,
 		},
@@ -128,7 +128,7 @@ func TestPopulate(t *testing.T) {
 				t.Setenv("AUTHORIZED_USERS", "test2")
 				return file.Name()
 			},
-			&UserEnv{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), Users: []string{"test2"}},
+			&Env{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), Users: []string{"test2"}},
 			false,
 			``,
 		},
@@ -146,7 +146,7 @@ func TestPopulate(t *testing.T) {
 				t.Setenv("USERS_FILE_PATH", file.Name())
 				return file.Name()
 			},
-			&UserEnv{Users: []string{"test"}},
+			&Env{Users: []string{"test"}},
 			false,
 			``,
 		},
@@ -160,7 +160,7 @@ func TestPopulate(t *testing.T) {
 				t.Setenv("USERS_FILE_PATH", file.Name())
 				return file.Name()
 			},
-			&UserEnv{},
+			&Env{},
 			false,
 			``,
 		},
@@ -170,7 +170,7 @@ func TestPopulate(t *testing.T) {
 				t.Setenv("CONFIG_FILE_PATH", "test")
 				return ""
 			},
-			&UserEnv{},
+			&Env{},
 			true,
 			`unable to read users file: open test`,
 		},
@@ -180,7 +180,7 @@ func TestPopulate(t *testing.T) {
 				t.Setenv("USERS_FILE_PATH", "test")
 				return ""
 			},
-			&UserEnv{},
+			&Env{},
 			true,
 			`unable to read users file`,
 		},
@@ -198,7 +198,7 @@ func TestPopulate(t *testing.T) {
 				t.Setenv("CONFIG_FILE_PATH", file.Name())
 				return file.Name()
 			},
-			&UserEnv{},
+			&Env{},
 			true,
 			`unable to unmarshal users file`,
 		},
@@ -213,7 +213,7 @@ func TestPopulate(t *testing.T) {
 				os.Remove(file)
 			})
 
-			actual := &UserEnv{}
+			actual := &Env{}
 			err := actual.Populate()
 
 			if tc.error {
@@ -233,22 +233,22 @@ func TestIsDeprecated(t *testing.T) {
 
 	cases := []struct {
 		description string
-		given       UserEnv
+		given       Env
 		expected    bool
 	}{
 		{
 			"not deprecated with expiration date set",
-			UserEnv{Expiration: time.Now()},
+			Env{Expiration: time.Now()},
 			false,
 		},
 		{
 			"deprecated with default expiration date value set",
-			UserEnv{Expiration: time.Time{}},
+			Env{Expiration: time.Time{}},
 			true,
 		},
 		{
 			"deprecated with nothing set",
-			UserEnv{},
+			Env{},
 			true,
 		},
 	}
@@ -270,22 +270,22 @@ func TestIsExpired(t *testing.T) {
 
 	cases := []struct {
 		description string
-		given       UserEnv
+		given       Env
 		expected    bool
 	}{
 		{
 			"before expiration date",
-			UserEnv{Expiration: time.Now().AddDate(0, 0, 1)},
+			Env{Expiration: time.Now().AddDate(0, 0, 1)},
 			false,
 		},
 		{
 			"past expiration date",
-			UserEnv{Expiration: time.Now().AddDate(0, 0, -1)},
+			Env{Expiration: time.Now().AddDate(0, 0, -1)},
 			true,
 		},
 		{
 			"invalid expiration date",
-			UserEnv{},
+			Env{},
 			true,
 		},
 	}
@@ -307,52 +307,52 @@ func TestMarshalJSON(t *testing.T) {
 
 	cases := []struct {
 		description string
-		given       UserEnv
+		given       Env
 		expected    string
 	}{
 		{
 			"users and expiration date",
-			UserEnv{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), Users: []string{"test"}},
+			Env{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), Users: []string{"test"}},
 			`{"users":["test"],"expiration":"2023-01-01"}`,
 		},
 		{
 			"no users and no expiration date",
-			UserEnv{},
+			Env{},
 			`{"users":[],"expiration":"0001-01-01"}`,
 		},
 		{
 			"empty users and empty expiration date",
-			UserEnv{Users: []string{}, Expiration: time.Time{}},
+			Env{Users: []string{}, Expiration: time.Time{}},
 			`{"users":[],"expiration":"0001-01-01"}`,
 		},
 		{
 			"empty users and no expiration date",
-			UserEnv{Users: []string{}},
+			Env{Users: []string{}},
 			`{"users":[],"expiration":"0001-01-01"}`,
 		},
 		{
 			"users and no expiration date",
-			UserEnv{Users: []string{"test"}},
+			Env{Users: []string{"test"}},
 			`{"users":["test"],"expiration":"0001-01-01"}`,
 		},
 		{
 			"no users and expiration date",
-			UserEnv{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
+			Env{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
 			`{"users":[],"expiration":"2023-01-01"}`,
 		},
 		{
 			"empty users and expiration date",
-			UserEnv{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), Users: []string{}},
+			Env{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), Users: []string{}},
 			`{"users":[],"expiration":"2023-01-01"}`,
 		},
 		{
 			"users and empty expiration date",
-			UserEnv{Users: []string{"test"}, Expiration: time.Time{}},
+			Env{Users: []string{"test"}, Expiration: time.Time{}},
 			`{"users":["test"],"expiration":"0001-01-01"}`,
 		},
 		{
 			"no users and empty expiration date",
-			UserEnv{Expiration: time.Time{}},
+			Env{Expiration: time.Time{}},
 			`{"users":[],"expiration":"0001-01-01"}`,
 		},
 	}
@@ -376,91 +376,91 @@ func TestUnmarshalJSON(t *testing.T) {
 	cases := []struct {
 		description string
 		given       string
-		expected    UserEnv
+		expected    Env
 		error       bool
 		want        string
 	}{
 		{
 			"valid JSON with users and expiration date",
 			`{"users":["test"],"expiration":"2023-01-01"}`,
-			UserEnv{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), Users: []string{"test"}},
+			Env{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), Users: []string{"test"}},
 			false,
 			``,
 		},
 		{
 			"valid JSON with users and expiration date set to null",
 			`{"users":null,"expiration":null}`,
-			UserEnv{},
+			Env{},
 			true,
 			`unable to parse expiration date`,
 		},
 		{
 			"valid JSON with users and expiration set to empty values",
 			`{"users":[],"expiration":""}`,
-			UserEnv{},
+			Env{},
 			true,
 			`unable to parse expiration date`,
 		},
 		{
 			"valid JSON with users set to null without expiration date",
 			`{"users":null}`,
-			UserEnv{},
+			Env{},
 			true,
 			`unable to find expiration date`,
 		},
 		{
 			"valid JSON with users set to empty value without expiration date",
 			`{"users":[]}`,
-			UserEnv{},
+			Env{},
 			true,
 			`unable to find expiration date`,
 		},
 		{
 			"valid JSON with user set to invalid value",
 			`{"users":["test", -1], "expiration": "2023-01-01"}`,
-			UserEnv{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), Users: []string{"test"}},
+			Env{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), Users: []string{"test"}},
 			true,
 			`unable to parse user`,
 		},
 		{
 			"valid JSON without users with expiration date",
 			`{"expiration":"2023-01-01"}`,
-			UserEnv{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
+			Env{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
 			true,
 			`unable to find users list`,
 		},
 		{
 			"valid JSON without users with expiration date set to null",
 			`{"expiration":null}`,
-			UserEnv{},
+			Env{},
 			true,
 			`unable to parse expiration date`,
 		},
 		{
 			"valid JSON with users set to null with expiration date",
 			`{"users":null,"expiration":"2023-01-01"}`,
-			UserEnv{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
+			Env{Expiration: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
 			true,
 			`unable to parse users list`,
 		},
 		{
 			"invalid empty string with nothing set",
 			``,
-			UserEnv{},
+			Env{},
 			true,
 			`unable to unmarshal user file`,
 		},
 		{
 			"invalid empty JSON object with nothing set",
 			`{}`,
-			UserEnv{},
+			Env{},
 			true,
 			`unable to find expiration date`,
 		},
 		{
 			"invalid JSON",
 			`{"users:[], "expiration": "2023-01-01"}`,
-			UserEnv{},
+			Env{},
 			true,
 			`unable to unmarshal user file`,
 		},
@@ -471,7 +471,7 @@ func TestUnmarshalJSON(t *testing.T) {
 		t.Run(tc.description, func(t *testing.T) {
 			t.Parallel()
 
-			results := UserEnv{}
+			results := Env{}
 			err := results.UnmarshalJSON([]byte(tc.given))
 
 			if tc.error {

@@ -13,16 +13,16 @@ import (
 
 const healthcheckTimeout = 5 * time.Second
 
-func Healthcheck(env *gabi.Env) http.Handler {
+func Healthcheck(cfg *gabi.Config) http.Handler {
 	return healthcheck.Handler(
 		healthcheck.WithTimeout(healthcheckTimeout),
 		healthcheck.WithChecker(
 			"database", healthcheck.CheckerFunc(
 				func(ctx context.Context) error {
-					err := env.DB.PingContext(ctx)
+					err := cfg.DB.PingContext(ctx)
 					if err != nil {
 						l := "Unable to connect to the database"
-						env.Logger.Errorf("%s: %s", l, err)
+						cfg.Logger.Errorf("%s: %s", l, err)
 						return errors.New(l)
 					}
 					return nil

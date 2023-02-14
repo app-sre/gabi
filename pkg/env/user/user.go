@@ -14,16 +14,16 @@ import (
 
 const ExpiryDateLayout = "2006-01-02"
 
-type UserEnv struct {
+type Env struct {
 	Expiration time.Time `json:"expiration"`
 	Users      []string  `json:"users"`
 }
 
-func NewUserEnv() *UserEnv {
-	return &UserEnv{}
+func NewUserEnv() *Env {
+	return &Env{}
 }
 
-func (u *UserEnv) Populate() error {
+func (u *Env) Populate() error {
 	if path := os.Getenv("USERS_FILE_PATH"); path != "" {
 		file, err := os.Open(path)
 		if err != nil {
@@ -61,7 +61,7 @@ func (u *UserEnv) Populate() error {
 		u.Expiration = t
 	}
 	if u.Expiration == (time.Time{}) {
-		return &env.EnvError{Name: "EXPIRATION_DATE"}
+		return &env.Error{Name: "EXPIRATION_DATE"}
 	}
 
 	if users := os.Getenv("AUTHORIZED_USERS"); users != "" {
@@ -79,19 +79,19 @@ func (u *UserEnv) Populate() error {
 	return nil
 }
 
-func (u *UserEnv) IsDeprecated() bool {
+func (u *Env) IsDeprecated() bool {
 	return u.Expiration == (time.Time{})
 }
 
-func (u *UserEnv) IsExpired() bool {
+func (u *Env) IsExpired() bool {
 	if u.IsDeprecated() {
 		return len(u.Users) == 0
 	}
 	return u.Expiration.Before(time.Now())
 }
 
-func (u *UserEnv) MarshalJSON() ([]byte, error) {
-	type alias UserEnv
+func (u *Env) MarshalJSON() ([]byte, error) {
+	type alias Env
 
 	aux := &struct {
 		*alias
@@ -110,7 +110,7 @@ func (u *UserEnv) MarshalJSON() ([]byte, error) {
 	return json, nil
 }
 
-func (u *UserEnv) UnmarshalJSON(b []byte) error {
+func (u *Env) UnmarshalJSON(b []byte) error {
 	var raw map[string]any
 
 	if err := json.Unmarshal(b, &raw); err != nil {

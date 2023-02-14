@@ -18,7 +18,7 @@ func TestAuthorization(t *testing.T) {
 
 	cases := []struct {
 		description string
-		given       *user.UserEnv
+		given       *user.Env
 		headers     func(*http.Request)
 		code        int
 		body        string
@@ -26,7 +26,7 @@ func TestAuthorization(t *testing.T) {
 	}{
 		{
 			"no users set with valid header",
-			&user.UserEnv{},
+			&user.Env{},
 			func(r *http.Request) {
 				r.Header.Set("X-Forwarded-User", "test")
 			},
@@ -36,7 +36,7 @@ func TestAuthorization(t *testing.T) {
 		},
 		{
 			"empty users lists with valid header",
-			&user.UserEnv{Users: []string{}},
+			&user.Env{Users: []string{}},
 			func(r *http.Request) {
 				r.Header.Set("X-Forwarded-User", "test")
 			},
@@ -46,7 +46,7 @@ func TestAuthorization(t *testing.T) {
 		},
 		{
 			"empty users lists with invalid header",
-			&user.UserEnv{Users: []string{}},
+			&user.Env{Users: []string{}},
 			func(r *http.Request) {
 				r.Header.Set("X-Forwarded-For", "test")
 			},
@@ -56,7 +56,7 @@ func TestAuthorization(t *testing.T) {
 		},
 		{
 			"no users set without required header",
-			&user.UserEnv{},
+			&user.Env{},
 			func(r *http.Request) {
 				// No-op.
 			},
@@ -66,7 +66,7 @@ func TestAuthorization(t *testing.T) {
 		},
 		{
 			"users set without required header",
-			&user.UserEnv{Users: []string{"test"}},
+			&user.Env{Users: []string{"test"}},
 			func(r *http.Request) {
 				// No-op.
 			},
@@ -76,7 +76,7 @@ func TestAuthorization(t *testing.T) {
 		},
 		{
 			"users set with required header value set to invalid user",
-			&user.UserEnv{Users: []string{"test"}},
+			&user.Env{Users: []string{"test"}},
 			func(r *http.Request) {
 				r.Header.Set("X-Forwarded-User", "test2")
 			},
@@ -86,7 +86,7 @@ func TestAuthorization(t *testing.T) {
 		},
 		{
 			"users set with required header value set to valid user",
-			&user.UserEnv{Users: []string{"test"}},
+			&user.Env{Users: []string{"test"}},
 			func(r *http.Request) {
 				r.Header.Set("X-Forwarded-User", "test")
 			},
@@ -113,9 +113,9 @@ func TestAuthorization(t *testing.T) {
 
 			tc.headers(r)
 
-			expected := &gabi.Env{Logger: logger, UserEnv: tc.given}
+			expected := &gabi.Config{Logger: logger, UserEnv: tc.given}
 			Authorization(expected)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				s, ok := r.Context().Value(contextUserKey).(string)
+				s, ok := r.Context().Value(ContextKeyUser).(string)
 				if !ok {
 					t.Fatal("invalid context")
 				}

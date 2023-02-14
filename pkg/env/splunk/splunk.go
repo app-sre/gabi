@@ -6,7 +6,7 @@ import (
 	"github.com/app-sre/gabi/pkg/env"
 )
 
-type SplunkEnv struct {
+type Env struct {
 	Index     string
 	Endpoint  string
 	Token     string
@@ -15,44 +15,44 @@ type SplunkEnv struct {
 	Pod       string
 }
 
-func NewSplunkEnv() *SplunkEnv {
-	return &SplunkEnv{}
+func NewSplunkEnv() *Env {
+	return &Env{}
 }
 
-func (s *SplunkEnv) Populate() error {
+func (s *Env) Populate() error {
 	index := os.Getenv("SPLUNK_INDEX")
 	if index == "" {
-		return &env.EnvError{Name: "SPLUNK_INDEX"}
+		return &env.Error{Name: "SPLUNK_INDEX"}
 	}
 	s.Index = index
 
 	endpoint := os.Getenv("SPLUNK_ENDPOINT")
 	if endpoint == "" {
-		return &env.EnvError{Name: "SPLUNK_ENDPOINT"}
+		return &env.Error{Name: "SPLUNK_ENDPOINT"}
 	}
 	s.Endpoint = endpoint
 
 	token := os.Getenv("SPLUNK_TOKEN")
 	if token == "" {
-		return &env.EnvError{Name: "SPLUNK_TOKEN"}
+		return &env.Error{Name: "SPLUNK_TOKEN"}
 	}
 	s.Token = token
 
 	host := os.Getenv("HOST")
 	if host == "" {
-		return &env.EnvError{Name: "HOST"}
+		return &env.Error{Name: "HOST"}
 	}
 	s.Host = host
 
 	namespace := os.Getenv("NAMESPACE")
 	if namespace == "" {
-		return &env.EnvError{Name: "NAMESPACE"}
+		return &env.Error{Name: "NAMESPACE"}
 	}
 	s.Namespace = namespace
 
 	pod := os.Getenv("POD_NAME")
 	if pod == "" {
-		return &env.EnvError{Name: "POD_NAME"}
+		return &env.Error{Name: "POD_NAME"}
 	}
 	s.Pod = pod
 

@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
+	"encoding/base64"
 	"errors"
 	"io"
 	"net/http"
@@ -13,6 +15,7 @@ import (
 	"github.com/app-sre/gabi/internal/test"
 	gabi "github.com/app-sre/gabi/pkg"
 	gabidb "github.com/app-sre/gabi/pkg/env/db"
+	"github.com/app-sre/gabi/pkg/middleware"
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -25,6 +28,8 @@ func TestQuery(t *testing.T) {
 		description string
 		database    func() (*sql.DB, sqlmock.Sqlmock)
 		mock        func(sqlmock.Sqlmock)
+		context     func() context.Context
+		parameters  func(*http.Request)
 		request     func() *bytes.Buffer
 		code        int
 		body        string
@@ -41,6 +46,172 @@ func TestQuery(t *testing.T) {
 				mock.ExpectBegin()
 				mock.ExpectQuery(`select 1;`).WillReturnRows(rows)
 				mock.ExpectCommit()
+			},
+			func() context.Context {
+				return context.TODO()
+			},
+			func(r *http.Request) {
+				// No-op.
+			},
+			func() *bytes.Buffer {
+				return bytes.NewBufferString(`{"query": "select 1;"}`)
+			},
+			200,
+			`{"result":[["?column?"],["1"]],"error":""}`,
+			``,
+		},
+		{
+			"valid query with SQL statements passed via context",
+			func() (*sql.DB, sqlmock.Sqlmock) {
+				db, mock, _ := sqlmock.New()
+				return db, mock
+			},
+			func(mock sqlmock.Sqlmock) {
+				rows := sqlmock.NewRows([]string{"?column?"}).AddRow("2")
+				mock.ExpectBegin()
+				mock.ExpectQuery(`select 2;`).WillReturnRows(rows)
+				mock.ExpectCommit()
+			},
+			func() context.Context {
+				ctx := context.TODO()
+				return context.WithValue(ctx, middleware.ContextKeyQuery, "select 2;")
+			},
+			func(r *http.Request) {
+				// No-op.
+			},
+			func() *bytes.Buffer {
+				return bytes.NewBufferString(`{"query": "select 1;"}`)
+			},
+			200,
+			`{"result":[["?column?"],["2"]],"error":""}`,
+			``,
+		},
+		{
+			"valid query with empty context value provided",
+			func() (*sql.DB, sqlmock.Sqlmock) {
+				db, mock, _ := sqlmock.New()
+				return db, mock
+			},
+			func(mock sqlmock.Sqlmock) {
+				rows := sqlmock.NewRows([]string{"?column?"}).AddRow("1")
+				mock.ExpectBegin()
+				mock.ExpectQuery(`select 1;`).WillReturnRows(rows)
+				mock.ExpectCommit()
+			},
+			func() context.Context {
+				ctx := context.TODO()
+				return context.WithValue(ctx, middleware.ContextKeyQuery, "")
+			},
+			func(r *http.Request) {
+				// No-op.
+			},
+			func() *bytes.Buffer {
+				return bytes.NewBufferString(`{"query": "select 1;"}`)
+			},
+			200,
+			`{"result":[["?column?"],["1"]],"error":""}`,
+			``,
+		},
+		{
+			"valid Base64-encoded query",
+			func() (*sql.DB, sqlmock.Sqlmock) {
+				db, mock, _ := sqlmock.New()
+				return db, mock
+			},
+			func(mock sqlmock.Sqlmock) {
+				rows := sqlmock.NewRows([]string{"?column?"}).AddRow("1")
+				mock.ExpectBegin()
+				mock.ExpectQuery(`select 1;`).WillReturnRows(rows)
+				mock.ExpectCommit()
+			},
+			func() context.Context {
+				return context.TODO()
+			},
+			func(r *http.Request) {
+				q := r.URL.Query()
+				q.Add("base64_query", "true")
+				r.URL.RawQuery = q.Encode()
+			},
+			func() *bytes.Buffer {
+				return bytes.NewBufferString(`{"query": "c2VsZWN0IDE7"}`)
+			},
+			200,
+			`{"result":[["?column?"],["1"]],"error":""}`,
+			``,
+		},
+		{
+			"valid query with empty HTTP query parameters provided",
+			func() (*sql.DB, sqlmock.Sqlmock) {
+				db, mock, _ := sqlmock.New()
+				return db, mock
+			},
+			func(mock sqlmock.Sqlmock) {
+				rows := sqlmock.NewRows([]string{"?column?"}).AddRow("1")
+				mock.ExpectBegin()
+				mock.ExpectQuery(`select 1;`).WillReturnRows(rows)
+				mock.ExpectCommit()
+			},
+			func() context.Context {
+				return context.TODO()
+			},
+			func(r *http.Request) {
+				q := r.URL.Query()
+				q.Add("base64_query", "")
+				r.URL.RawQuery = q.Encode()
+			},
+			func() *bytes.Buffer {
+				return bytes.NewBufferString(`{"query": "select 1;"}`)
+			},
+			200,
+			`{"result":[["?column?"],["1"]],"error":""}`,
+			``,
+		},
+		{
+			"valid query with Base64-encoded results",
+			func() (*sql.DB, sqlmock.Sqlmock) {
+				db, mock, _ := sqlmock.New()
+				return db, mock
+			},
+			func(mock sqlmock.Sqlmock) {
+				rows := sqlmock.NewRows([]string{"?column?"}).AddRow("1")
+				mock.ExpectBegin()
+				mock.ExpectQuery(`select 1;`).WillReturnRows(rows)
+				mock.ExpectCommit()
+			},
+			func() context.Context {
+				return context.TODO()
+			},
+			func(r *http.Request) {
+				q := r.URL.Query()
+				q.Add("base64_results", "true")
+				r.URL.RawQuery = q.Encode()
+			},
+			func() *bytes.Buffer {
+				return bytes.NewBufferString(`{"query": "select 1;"}`)
+			},
+			200,
+			`{"result":[["?column?"],["MQ=="]],"error":""}`,
+			``,
+		},
+		{
+			"valid query without Base64-encoded results with empty HTTP query parameters provided",
+			func() (*sql.DB, sqlmock.Sqlmock) {
+				db, mock, _ := sqlmock.New()
+				return db, mock
+			},
+			func(mock sqlmock.Sqlmock) {
+				rows := sqlmock.NewRows([]string{"?column?"}).AddRow("1")
+				mock.ExpectBegin()
+				mock.ExpectQuery(`select 1;`).WillReturnRows(rows)
+				mock.ExpectCommit()
+			},
+			func() context.Context {
+				return context.TODO()
+			},
+			func(r *http.Request) {
+				q := r.URL.Query()
+				q.Add("base64_results", "")
+				r.URL.RawQuery = q.Encode()
 			},
 			func() *bytes.Buffer {
 				return bytes.NewBufferString(`{"query": "select 1;"}`)
@@ -61,6 +232,12 @@ func TestQuery(t *testing.T) {
 				mock.ExpectQuery(``).WillReturnRows(rows)
 				mock.ExpectCommit()
 			},
+			func() context.Context {
+				return context.TODO()
+			},
+			func(r *http.Request) {
+				// No-op.
+			},
 			func() *bytes.Buffer {
 				return bytes.NewBufferString(`{"query": ""}`)
 			},
@@ -78,6 +255,12 @@ func TestQuery(t *testing.T) {
 				mock.ExpectBegin()
 				mock.ExpectQuery(`select 1;`).WillReturnError(errors.New("test"))
 				mock.ExpectRollback()
+			},
+			func() context.Context {
+				return context.TODO()
+			},
+			func(r *http.Request) {
+				// No-op.
 			},
 			func() *bytes.Buffer {
 				return bytes.NewBufferString(`{"query":"select 1;"}`)
@@ -97,6 +280,12 @@ func TestQuery(t *testing.T) {
 				mock.ExpectQuery(`select 1;`).WillReturnError(errors.New("test"))
 				mock.ExpectRollback()
 			},
+			func() context.Context {
+				return context.TODO()
+			},
+			func(r *http.Request) {
+				// No-op.
+			},
 			func() *bytes.Buffer {
 				return bytes.NewBufferString(`{"query":"select 1;"}`)
 			},
@@ -112,6 +301,12 @@ func TestQuery(t *testing.T) {
 			},
 			func(mock sqlmock.Sqlmock) {
 				mock.ExpectBegin().WillReturnError(errors.New("test"))
+			},
+			func() context.Context {
+				return context.TODO()
+			},
+			func(r *http.Request) {
+				// No-op.
 			},
 			func() *bytes.Buffer {
 				return bytes.NewBufferString(`{"query":"select 1;"}`)
@@ -131,6 +326,12 @@ func TestQuery(t *testing.T) {
 				mock.ExpectBegin()
 				mock.ExpectQuery(`select 1;`).WillReturnRows(rows)
 				mock.ExpectCommit().WillReturnError(errors.New("test"))
+			},
+			func() context.Context {
+				return context.TODO()
+			},
+			func(r *http.Request) {
+				// No-op.
 			},
 			func() *bytes.Buffer {
 				return bytes.NewBufferString(`{"query": "select 1;"}`)
@@ -153,6 +354,12 @@ func TestQuery(t *testing.T) {
 				mock.ExpectQuery(`select \* from test;`).WillReturnRows(rows)
 				mock.ExpectRollback()
 			},
+			func() context.Context {
+				return context.TODO()
+			},
+			func(r *http.Request) {
+				// No-op.
+			},
 			func() *bytes.Buffer {
 				return bytes.NewBufferString(`{"query": "select * from test;"}`)
 			},
@@ -168,6 +375,12 @@ func TestQuery(t *testing.T) {
 				return db, mock
 			},
 			func(mock sqlmock.Sqlmock) {
+				// No-op.
+			},
+			func() context.Context {
+				return context.TODO()
+			},
+			func(r *http.Request) {
 				// No-op.
 			},
 			func() *bytes.Buffer {
@@ -186,6 +399,12 @@ func TestQuery(t *testing.T) {
 			func(mock sqlmock.Sqlmock) {
 				// No-op.
 			},
+			func() context.Context {
+				return context.TODO()
+			},
+			func(r *http.Request) {
+				// No-op.
+			},
 			func() *bytes.Buffer {
 				return &bytes.Buffer{}
 			},
@@ -200,6 +419,12 @@ func TestQuery(t *testing.T) {
 				return db, mock
 			},
 			func(mock sqlmock.Sqlmock) {
+				// No-op.
+			},
+			func() context.Context {
+				return context.TODO()
+			},
+			func(r *http.Request) {
 				// No-op.
 			},
 			func() *bytes.Buffer {
@@ -218,12 +443,42 @@ func TestQuery(t *testing.T) {
 			func(mock sqlmock.Sqlmock) {
 				// No-op.
 			},
+			func() context.Context {
+				return context.TODO()
+			},
+			func(r *http.Request) {
+				// No-op.
+			},
 			func() *bytes.Buffer {
 				return bytes.NewBufferString(`{"query": -1}`)
 			},
 			400,
 			``,
 			`Unable to decode request body`,
+		},
+		{
+			"invalid query with malformed Base64-encoded value in the body",
+			func() (*sql.DB, sqlmock.Sqlmock) {
+				db, mock, _ := sqlmock.New()
+				return db, mock
+			},
+			func(mock sqlmock.Sqlmock) {
+				// No-op.
+			},
+			func() context.Context {
+				return context.TODO()
+			},
+			func(r *http.Request) {
+				q := r.URL.Query()
+				q.Add("base64_query", "true")
+				r.URL.RawQuery = q.Encode()
+			},
+			func() *bytes.Buffer {
+				return bytes.NewBufferString(`{"query": "dGhpcyBpcyBhIHRlc3Q=="}`)
+			},
+			400,
+			`Unable to decode Base64-encoded query`,
+			``,
 		},
 	}
 
@@ -238,14 +493,16 @@ func TestQuery(t *testing.T) {
 			r := httptest.NewRequest(http.MethodGet, "/", tc.request())
 
 			logger := test.DummyLogger(&output).Sugar()
+			encoder := base64.StdEncoding
 
 			db, mock := tc.database()
 			defer func() { _ = db.Close() }()
 
 			tc.mock(mock)
+			tc.parameters(r)
 
-			expected := &gabi.Env{DB: db, Logger: logger, DBEnv: &gabidb.DBEnv{}}
-			Query(expected).ServeHTTP(w, r)
+			expected := &gabi.Config{DB: db, DBEnv: &gabidb.Env{}, Logger: logger, Encoder: encoder}
+			Query(expected).ServeHTTP(w, r.WithContext(tc.context()))
 
 			actual := w.Result()
 			defer func() { _ = actual.Body.Close() }()

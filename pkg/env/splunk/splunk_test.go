@@ -14,14 +14,14 @@ func TestNewSplunkEnv(t *testing.T) {
 	actual := NewSplunkEnv()
 
 	require.NotNil(t, actual)
-	assert.IsType(t, &SplunkEnv{}, actual)
+	assert.IsType(t, &Env{}, actual)
 }
 
 func TestPopulate(t *testing.T) {
 	cases := []struct {
 		description string
 		given       func()
-		expected    *SplunkEnv
+		expected    *Env
 		error       bool
 		want        string
 	}{
@@ -35,7 +35,7 @@ func TestPopulate(t *testing.T) {
 				t.Setenv("NAMESPACE", "test")
 				t.Setenv("POD_NAME", "test")
 			},
-			&SplunkEnv{Index: "test", Endpoint: "test", Token: "test123", Host: "test", Namespace: "test", Pod: "test"},
+			&Env{Index: "test", Endpoint: "test", Token: "test123", Host: "test", Namespace: "test", Pod: "test"},
 			false,
 			``,
 		},
@@ -43,7 +43,7 @@ func TestPopulate(t *testing.T) {
 			"missing required SPLUNK_INDEX environment variable",
 			func() {
 			},
-			&SplunkEnv{},
+			&Env{},
 			true,
 			`unable to access environment variable: SPLUNK_INDEX`,
 		},
@@ -52,7 +52,7 @@ func TestPopulate(t *testing.T) {
 			func() {
 				t.Setenv("SPLUNK_INDEX", "")
 			},
-			&SplunkEnv{},
+			&Env{},
 			true,
 			`unable to access environment variable: SPLUNK_INDEX`,
 		},
@@ -61,7 +61,7 @@ func TestPopulate(t *testing.T) {
 			func() {
 				t.Setenv("SPLUNK_INDEX", "test")
 			},
-			&SplunkEnv{Index: "test"},
+			&Env{Index: "test"},
 			true,
 			`unable to access environment variable: SPLUNK_ENDPOINT`,
 		},
@@ -71,7 +71,7 @@ func TestPopulate(t *testing.T) {
 				t.Setenv("SPLUNK_INDEX", "test")
 				t.Setenv("SPLUNK_ENDPOINT", "test")
 			},
-			&SplunkEnv{Index: "test", Endpoint: "test", Token: "", Host: "", Namespace: "", Pod: ""},
+			&Env{Index: "test", Endpoint: "test", Token: "", Host: "", Namespace: "", Pod: ""},
 			true,
 			`unable to access environment variable: SPLUNK_TOKEN`,
 		},
@@ -82,7 +82,7 @@ func TestPopulate(t *testing.T) {
 				t.Setenv("SPLUNK_ENDPOINT", "test")
 				t.Setenv("SPLUNK_TOKEN", "test123")
 			},
-			&SplunkEnv{Index: "test", Endpoint: "test", Token: "test123", Host: "", Namespace: "", Pod: ""},
+			&Env{Index: "test", Endpoint: "test", Token: "test123", Host: "", Namespace: "", Pod: ""},
 			true,
 			`unable to access environment variable: HOST`,
 		},
@@ -94,7 +94,7 @@ func TestPopulate(t *testing.T) {
 				t.Setenv("SPLUNK_TOKEN", "test123")
 				t.Setenv("HOST", "test")
 			},
-			&SplunkEnv{Index: "test", Endpoint: "test", Token: "test123", Host: "test", Namespace: "", Pod: ""},
+			&Env{Index: "test", Endpoint: "test", Token: "test123", Host: "test", Namespace: "", Pod: ""},
 			true,
 			`unable to access environment variable: NAMESPACE`,
 		},
@@ -107,7 +107,7 @@ func TestPopulate(t *testing.T) {
 				t.Setenv("HOST", "test")
 				t.Setenv("NAMESPACE", "test")
 			},
-			&SplunkEnv{Index: "test", Endpoint: "test", Token: "test123", Host: "test", Namespace: "test", Pod: ""},
+			&Env{Index: "test", Endpoint: "test", Token: "test123", Host: "test", Namespace: "test", Pod: ""},
 			true,
 			`unable to access environment variable: POD_NAME`,
 		},
@@ -122,7 +122,7 @@ func TestPopulate(t *testing.T) {
 
 			tc.given()
 
-			actual := &SplunkEnv{}
+			actual := &Env{}
 			err := actual.Populate()
 
 			if tc.error {

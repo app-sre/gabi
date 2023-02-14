@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"database/sql"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"log"
@@ -75,13 +76,14 @@ func Run(logger *zap.SugaredLogger) error {
 
 	sa := audit.NewSplunkAudit(se)
 
-	env := &gabi.Env{
+	cfg := &gabi.Config{
 		DB:          db,
 		DBEnv:       dbe,
 		UserEnv:     usere,
 		LoggerAudit: la,
 		SplunkAudit: sa,
 		Logger:      logger,
+		Encoder:     base64.StdEncoding,
 	}
 
 	// Temp workaround for easy to access io.Writer.
@@ -94,15 +96,16 @@ func Run(logger *zap.SugaredLogger) error {
 	logHandler := gorillaHandlers.LoggingHandler
 
 	queryChain := alice.New(
-		alice.Constructor(middleware.Recovery(env)),
-		alice.Constructor(middleware.Authorization(env)),
-		alice.Constructor(middleware.Expiration(env)),
-		alice.Constructor(middleware.Audit(env)),
-	).Then(handlers.Query(env))
+		alice.Constructor(middleware.Recovery(cfg)),
+		alice.Constructor(middleware.Authorization(cfg)),
+		alice.Constructor(middleware.Expiration(cfg)),
+		alice.Constructor(middleware.Audit(cfg)),
+	)
+	queryHandler := queryChain.Then(handlers.Query(cfg))
 
 	r := mux.NewRouter()
-	r.Handle("/healthcheck", logHandler(healthLogOutput, handlers.Healthcheck(env))).Methods("GET")
-	r.Handle("/query", logHandler(defaultLogOutput, queryChain)).Methods("POST")
+	r.Handle("/healthcheck", logHandler(healthLogOutput, handlers.Healthcheck(cfg))).Methods("GET")
+	r.Handle("/query", logHandler(defaultLogOutput, queryHandler)).Methods("POST")
 
 	port := 8080
 	logger.Infof("HTTP server starting on port: %d", port)

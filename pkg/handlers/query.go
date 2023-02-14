@@ -11,31 +11,73 @@ import (
 	"net/url"
 	"os"
 	"reflect"
+	"strconv"
 
 	gabi "github.com/app-sre/gabi/pkg"
+	"github.com/app-sre/gabi/pkg/middleware"
 	"github.com/app-sre/gabi/pkg/models"
 )
 
-func Query(env *gabi.Env) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var request models.QueryRequest
+const (
+	base64EncodeResults byte = 1 << iota
+	base64DecodeQuery
+)
 
-		err := json.NewDecoder(r.Body).Decode(&request)
-		if err != nil {
-			env.Logger.Errorf("Unable to decode request body: %s", err)
-			if errors.Is(err, io.EOF) {
-				http.Error(w, "Request body cannot be empty", http.StatusBadRequest)
-				return
+func Query(cfg *gabi.Config) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
+		var (
+			base64Mode byte
+			request    models.QueryRequest
+		)
+
+		if s := r.URL.Query().Get("base64_results"); s != "" {
+			if ok, err := strconv.ParseBool(s); err == nil && ok {
+				base64Mode |= base64EncodeResults
 			}
-			_ = queryErrorResponse(w, err)
-			return
 		}
 
-		tx, err := env.DB.BeginTx(context.Background(), &sql.TxOptions{
-			ReadOnly: !env.DBEnv.AllowWrite,
+		if ctxQuery := ctx.Value(middleware.ContextKeyQuery); ctxQuery != nil {
+			if s, ok := ctxQuery.(string); ok {
+				request.Query = s
+			}
+		}
+		if request.Query == "" {
+			if s := r.URL.Query().Get("base64_query"); s != "" {
+				if ok, err := strconv.ParseBool(s); err == nil && ok {
+					base64Mode |= base64DecodeQuery
+				}
+			}
+
+			err := json.NewDecoder(r.Body).Decode(&request)
+			if err != nil {
+				cfg.Logger.Errorf("Unable to decode request body: %s", err)
+				if errors.Is(err, io.EOF) {
+					http.Error(w, "Request body cannot be empty", http.StatusBadRequest)
+					return
+				}
+				_ = queryErrorResponse(w, err)
+				return
+			}
+
+			if base64Mode&base64DecodeQuery != 0 {
+				bytes, err := cfg.Encoder.DecodeString(request.Query)
+				if err != nil {
+					l := "Unable to decode Base64-encoded query"
+					cfg.Logger.Errorf("%s: %s", l, err)
+					http.Error(w, l, http.StatusBadRequest)
+					return
+				}
+				request.Query = string(bytes)
+			}
+		}
+
+		tx, err := cfg.DB.BeginTx(context.Background(), &sql.TxOptions{
+			ReadOnly: !cfg.DBEnv.AllowWrite,
 		})
 		if err != nil {
-			env.Logger.Errorf("Unable to start database transaction: %s", err)
+			cfg.Logger.Errorf("Unable to start database transaction: %s", err)
 			_ = queryErrorResponse(w, err)
 			return
 		}
@@ -43,15 +85,16 @@ func Query(env *gabi.Env) http.HandlerFunc {
 
 		rows, err := tx.Query(request.Query)
 		if err != nil {
-			env.Logger.Errorf("Unable to query database: %s", err)
+			cfg.Logger.Errorf("Unable to query database: %s", err)
 			_ = queryErrorResponse(w, err)
 			return
 		}
 		defer func() { _ = rows.Close() }()
 
-		cols, err := rows.Columns() // Remember to check err afterwards
+		// Remember to check err afterwards.
+		cols, err := rows.Columns()
 		if err != nil {
-			env.Logger.Errorf("Unable to process database query: %s", err)
+			cfg.Logger.Errorf("Unable to process database query: %s", err)
 			_ = queryErrorResponse(w, err)
 			return
 		}
@@ -75,7 +118,7 @@ func Query(env *gabi.Env) http.HandlerFunc {
 			// and you can use type introspection and type assertions
 			// to fetch the column into a typed variable.
 			if err != nil {
-				env.Logger.Errorf("Unable to process database query: %s", err)
+				cfg.Logger.Errorf("Unable to process database query: %s", err)
 				_ = queryErrorResponse(w, err)
 				return
 			}
@@ -86,25 +129,30 @@ func Query(env *gabi.Env) http.HandlerFunc {
 				content, ok := reflect.ValueOf(value).Interface().(*sql.RawBytes)
 				if !ok {
 					err = fmt.Errorf("unable to convert value type %T to *sql.RawBytes", value)
-					env.Logger.Errorf("Unable to process database query: %s", err)
+					cfg.Logger.Errorf("Unable to process database query: %s", err)
 					_ = queryErrorResponse(w, err)
 					return
 				}
-				row = append(row, string(*content))
+				s := string(*content)
+
+				if base64Mode&base64EncodeResults != 0 {
+					s = cfg.Encoder.EncodeToString(*content)
+				}
+				row = append(row, s)
 			}
 			result = append(result, row)
 		}
 
 		err = rows.Err()
 		if err != nil {
-			env.Logger.Errorf("Unable to process database query: %s", err)
+			cfg.Logger.Errorf("Unable to process database query: %s", err)
 			_ = queryErrorResponse(w, err)
 			return
 		}
 
 		err = tx.Commit()
 		if err != nil {
-			env.Logger.Errorf("Unable to commit database changes: %s", err)
+			cfg.Logger.Errorf("Unable to commit database changes: %s", err)
 			_ = queryErrorResponse(w, err)
 			return
 		}

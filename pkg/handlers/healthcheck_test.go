@@ -59,7 +59,7 @@ func TestHealthcheck(t *testing.T) {
 
 			tc.given(mock)
 
-			expected := &gabi.Env{DB: db, Logger: logger}
+			expected := &gabi.Config{DB: db, Logger: logger}
 			Healthcheck(expected).ServeHTTP(w, r)
 
 			actual := w.Result()
