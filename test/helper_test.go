@@ -20,7 +20,7 @@ import (
 	"github.com/orlangure/gnomock"
 	"github.com/orlangure/gnomock/preset/postgres"
 	"github.com/orlangure/gnomock/preset/splunk"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func dummyHTTPClient() http.Client {
@@ -32,7 +32,7 @@ func dummyHTTPClient() http.Client {
 }
 
 func createConfigurationFile(t *testing.T, expiration time.Time, users []string) string {
-	usere := &user.UserEnv{
+	usere := &user.Env{
 		Expiration: expiration,
 		Users:      users,
 	}
@@ -97,7 +97,7 @@ func startPostgres(t *testing.T) *gnomock.Container {
 	psql, err := gnomock.StartCustom("quay.io/app-sre/postgres:12.5", p.Ports(),
 		options...,
 	)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	t.Cleanup(func() { _ = gnomock.Stop(psql) })
 
@@ -117,7 +117,7 @@ func startSplunk(t *testing.T, password string) *gnomock.Container {
 	splunk, err := gnomock.StartCustom("quay.io/app-sre/splunk:latest", s.Ports(),
 		options...,
 	)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	t.Cleanup(func() { _ = gnomock.Stop(splunk) })
 

@@ -14,14 +14,14 @@ func TestNewDBEnv(t *testing.T) {
 	actual := NewDBEnv()
 
 	require.NotNil(t, actual)
-	assert.IsType(t, &DBEnv{}, actual)
+	assert.IsType(t, &Env{}, actual)
 }
 
 func TestPopulate(t *testing.T) {
 	cases := []struct {
 		description string
 		given       func()
-		expected    *DBEnv
+		expected    *Env
 		error       bool
 		want        string
 	}{
@@ -36,7 +36,7 @@ func TestPopulate(t *testing.T) {
 				t.Setenv("DB_NAME", "test")
 				t.Setenv("DB_WRITE", "false")
 			},
-			&DBEnv{
+			&Env{
 				Driver:     "pgx",
 				Host:       "test",
 				Port:       1234,
@@ -52,7 +52,7 @@ func TestPopulate(t *testing.T) {
 			"missing required environment variables",
 			func() {
 			},
-			&DBEnv{},
+			&Env{},
 			true,
 			`unable to access environment variable: DB_DRIVER`,
 		},
@@ -61,7 +61,7 @@ func TestPopulate(t *testing.T) {
 			func() {
 				t.Setenv("DB_DRIVER", "")
 			},
-			&DBEnv{},
+			&Env{},
 			true,
 			`unable to access environment variable: DB_DRIVER`,
 		},
@@ -70,7 +70,7 @@ func TestPopulate(t *testing.T) {
 			func() {
 				t.Setenv("DB_DRIVER", "pgx")
 			},
-			&DBEnv{Driver: "pgx"},
+			&Env{Driver: "pgx"},
 			true,
 			`unable to access environment variable: DB_HOST`,
 		},
@@ -81,7 +81,7 @@ func TestPopulate(t *testing.T) {
 				t.Setenv("DB_HOST", "test")
 				t.Setenv("DB_PORT", "1234")
 			},
-			&DBEnv{Driver: "pgx", Host: "test", Port: 1234},
+			&Env{Driver: "pgx", Host: "test", Port: 1234},
 			true,
 			`unable to access environment variable: DB_USER`,
 		},
@@ -93,7 +93,7 @@ func TestPopulate(t *testing.T) {
 				t.Setenv("DB_PORT", "1234")
 				t.Setenv("DB_USER", "test")
 			},
-			&DBEnv{Driver: "pgx", Host: "test", Port: 1234, Username: "test"},
+			&Env{Driver: "pgx", Host: "test", Port: 1234, Username: "test"},
 			true,
 			`unable to access environment variable: DB_PASS`,
 		},
@@ -106,7 +106,7 @@ func TestPopulate(t *testing.T) {
 				t.Setenv("DB_USER", "test")
 				t.Setenv("DB_PASS", "test123")
 			},
-			&DBEnv{Driver: "pgx", Host: "test", Port: 1234, Username: "test", Password: "test123"},
+			&Env{Driver: "pgx", Host: "test", Port: 1234, Username: "test", Password: "test123"},
 			true,
 			`unable to access environment variable: DB_NAME`,
 		},
@@ -119,7 +119,7 @@ func TestPopulate(t *testing.T) {
 				t.Setenv("DB_PASS", "test123")
 				t.Setenv("DB_NAME", "test")
 			},
-			&DBEnv{
+			&Env{
 				Driver:     "pgx",
 				Host:       "test",
 				Port:       5432,
@@ -140,7 +140,7 @@ func TestPopulate(t *testing.T) {
 				t.Setenv("DB_PASS", "test123")
 				t.Setenv("DB_NAME", "test")
 			},
-			&DBEnv{
+			&Env{
 				Driver:     "postgres",
 				Host:       "test",
 				Port:       5432,
@@ -157,7 +157,7 @@ func TestPopulate(t *testing.T) {
 			func() {
 				t.Setenv("DB_DRIVER", "test")
 			},
-			&DBEnv{Driver: "test", Host: "", Port: 0, Username: "", Password: "", Name: "", AllowWrite: false},
+			&Env{Driver: "test", Host: "", Port: 0, Username: "", Password: "", Name: "", AllowWrite: false},
 			true,
 			`unable to use driver type: test`,
 		},
@@ -171,7 +171,7 @@ func TestPopulate(t *testing.T) {
 				t.Setenv("DB_NAME", "test")
 				t.Setenv("DB_WRITE", "true")
 			},
-			&DBEnv{
+			&Env{
 				Driver:     "pgx",
 				Host:       "test",
 				Port:       5432,
@@ -190,7 +190,7 @@ func TestPopulate(t *testing.T) {
 				t.Setenv("DB_HOST", "test")
 				t.Setenv("DB_PORT", "test")
 			},
-			&DBEnv{Driver: "pgx", Host: "test", Port: 5432, Username: "", Password: "", Name: "", AllowWrite: false},
+			&Env{Driver: "pgx", Host: "test", Port: 5432, Username: "", Password: "", Name: "", AllowWrite: false},
 			true,
 			`unable to convert environment variable: DB_PORT`,
 		},
@@ -204,7 +204,7 @@ func TestPopulate(t *testing.T) {
 				t.Setenv("DB_NAME", "test")
 				t.Setenv("DB_WRITE", "-1")
 			},
-			&DBEnv{Driver: "pgx", Host: "test", Port: 5432, Username: "test", Password: "test123", Name: "test", AllowWrite: false},
+			&Env{Driver: "pgx", Host: "test", Port: 5432, Username: "test", Password: "test123", Name: "test", AllowWrite: false},
 			true,
 			`unable to convert environment variable: DB_WRITE`,
 		},
@@ -219,7 +219,7 @@ func TestPopulate(t *testing.T) {
 
 			tc.given()
 
-			actual := &DBEnv{}
+			actual := &Env{}
 			err := actual.Populate()
 
 			if tc.error {
@@ -299,7 +299,7 @@ func TestConnectionDSN(t *testing.T) {
 
 			tc.given()
 
-			expected := &DBEnv{}
+			expected := &Env{}
 			err := expected.Populate()
 
 			require.NoError(t, err)

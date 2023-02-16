@@ -65,7 +65,7 @@ func TestRecovery(t *testing.T) {
 
 			logger := test.DummyLogger(&output).Sugar()
 
-			expected := &gabi.Env{Logger: logger}
+			expected := &gabi.Config{Logger: logger}
 			Recovery(expected)(tc.given).ServeHTTP(w, r)
 
 			actual := w.Result()

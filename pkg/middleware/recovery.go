@@ -7,7 +7,7 @@ import (
 	gabi "github.com/app-sre/gabi/pkg"
 )
 
-func Recovery(env *gabi.Env) Middleware {
+func Recovery(cfg *gabi.Config) Middleware {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			defer func() {
@@ -17,7 +17,7 @@ func Recovery(env *gabi.Env) Middleware {
 						panic(err)
 					}
 
-					env.Logger.Errorf("Recovered from an error: %s", r)
+					cfg.Logger.Errorf("Recovered from an error: %s", r)
 					http.Error(w, "An internal error has occurred", http.StatusInternalServerError)
 				}
 			}()

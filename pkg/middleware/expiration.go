@@ -7,13 +7,13 @@ import (
 	"github.com/app-sre/gabi/pkg/env/user"
 )
 
-func Expiration(env *gabi.Env) Middleware {
+func Expiration(cfg *gabi.Config) Middleware {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if env.UserEnv.IsExpired() {
+			if cfg.UserEnv.IsExpired() {
 				l := "The service instance has expired"
-				env.Logger.Errorf("%s (expiration date: %s)", l,
-					env.UserEnv.Expiration.Format(user.ExpiryDateLayout),
+				cfg.Logger.Errorf("%s (expiration date: %s)", l,
+					cfg.UserEnv.Expiration.Format(user.ExpiryDateLayout),
 				)
 				http.Error(w, l, http.StatusServiceUnavailable)
 				return

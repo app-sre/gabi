@@ -19,25 +19,25 @@ func TestExpiration(t *testing.T) {
 
 	cases := []struct {
 		description string
-		given       *user.UserEnv
+		given       *user.Env
 		code        int
 		body        string
 	}{
 		{
 			"instance has not expired",
-			&user.UserEnv{Expiration: time.Now().AddDate(0, 0, 1)},
+			&user.Env{Expiration: time.Now().AddDate(0, 0, 1)},
 			200,
 			``,
 		},
 		{
 			"instance has expired",
-			&user.UserEnv{Expiration: time.Now().AddDate(0, 0, -1)},
+			&user.Env{Expiration: time.Now().AddDate(0, 0, -1)},
 			503,
 			`The service instance has expired`,
 		},
 		{
 			"invalid instance without expiration date",
-			&user.UserEnv{},
+			&user.Env{},
 			503,
 			`The service instance has expired`,
 		},
@@ -57,7 +57,7 @@ func TestExpiration(t *testing.T) {
 
 			logger := test.DummyLogger(io.Discard).Sugar()
 
-			expected := &gabi.Env{Logger: logger, UserEnv: tc.given}
+			expected := &gabi.Config{Logger: logger, UserEnv: tc.given}
 			Expiration(expected)(dummyHandler).ServeHTTP(w, r)
 
 			actual := w.Result()

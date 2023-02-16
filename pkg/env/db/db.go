@@ -9,7 +9,7 @@ import (
 	"github.com/app-sre/gabi/pkg/env"
 )
 
-type DBEnv struct {
+type Env struct {
 	Driver     DriverType
 	Host       string
 	Port       int
@@ -19,14 +19,14 @@ type DBEnv struct {
 	AllowWrite bool
 }
 
-func NewDBEnv() *DBEnv {
-	return &DBEnv{}
+func NewDBEnv() *Env {
+	return &Env{}
 }
 
-func (d *DBEnv) Populate() error {
+func (d *Env) Populate() error {
 	driver := os.Getenv("DB_DRIVER")
 	if driver == "" {
-		return &env.EnvError{Name: "DB_DRIVER"}
+		return &env.Error{Name: "DB_DRIVER"}
 	}
 	d.Driver = DriverType(driver)
 
@@ -36,7 +36,7 @@ func (d *DBEnv) Populate() error {
 
 	host := os.Getenv("DB_HOST")
 	if host == "" {
-		return &env.EnvError{Name: "DB_HOST"}
+		return &env.Error{Name: "DB_HOST"}
 	}
 	d.Host = host
 
@@ -45,26 +45,26 @@ func (d *DBEnv) Populate() error {
 	if portString != "" {
 		port, err := strconv.ParseInt(portString, 10, 0)
 		if err != nil {
-			return &env.EnvTypeError{Name: "DB_PORT"}
+			return &env.TypeError{Name: "DB_PORT"}
 		}
 		d.Port = int(port)
 	}
 
 	username := os.Getenv("DB_USER")
 	if username == "" {
-		return &env.EnvError{Name: "DB_USER"}
+		return &env.Error{Name: "DB_USER"}
 	}
 	d.Username = username
 
 	password := os.Getenv("DB_PASS")
 	if password == "" {
-		return &env.EnvError{Name: "DB_PASS"}
+		return &env.Error{Name: "DB_PASS"}
 	}
 	d.Password = password
 
 	name := os.Getenv("DB_NAME")
 	if name == "" {
-		return &env.EnvError{Name: "DB_NAME"}
+		return &env.Error{Name: "DB_NAME"}
 	}
 	d.Name = name
 
@@ -73,7 +73,7 @@ func (d *DBEnv) Populate() error {
 	if writeString != "" {
 		write, err := strconv.ParseBool(writeString)
 		if err != nil {
-			return &env.EnvTypeError{Name: "DB_WRITE"}
+			return &env.TypeError{Name: "DB_WRITE"}
 		}
 		d.AllowWrite = write
 	}
@@ -86,6 +86,6 @@ func (d *DBEnv) Populate() error {
 	return nil
 }
 
-func (d *DBEnv) ConnectionDSN() string {
+func (d *Env) ConnectionDSN() string {
 	return fmt.Sprintf(d.Driver.Format(), d.Username, d.Password, d.Host, d.Port, d.Name)
 }

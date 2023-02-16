@@ -22,7 +22,7 @@ func TestNewSplunkAudit(t *testing.T) {
 	cases := []struct {
 		description string
 		given       Option
-		want        *splunk.SplunkEnv
+		want        *splunk.Env
 		option      bool
 	}{
 		{
@@ -30,7 +30,7 @@ func TestNewSplunkAudit(t *testing.T) {
 			func(s *SplunkAudit) {
 				s.SplunkEnv.Index = "test"
 			},
-			&splunk.SplunkEnv{Index: "test"},
+			&splunk.Env{Index: "test"},
 			true,
 		},
 		{
@@ -38,7 +38,7 @@ func TestNewSplunkAudit(t *testing.T) {
 			func(s *SplunkAudit) {
 				// No-op.
 			},
-			&splunk.SplunkEnv{},
+			&splunk.Env{},
 			true,
 		},
 		{
@@ -46,7 +46,7 @@ func TestNewSplunkAudit(t *testing.T) {
 			func(s *SplunkAudit) {
 				// No-op.
 			},
-			&splunk.SplunkEnv{},
+			&splunk.Env{},
 			false,
 		},
 	}
@@ -59,9 +59,9 @@ func TestNewSplunkAudit(t *testing.T) {
 			var actual *SplunkAudit
 
 			if tc.option {
-				actual = NewSplunkAudit(&splunk.SplunkEnv{}, tc.given)
+				actual = NewSplunkAudit(&splunk.Env{}, tc.given)
 			} else {
-				actual = NewSplunkAudit(&splunk.SplunkEnv{})
+				actual = NewSplunkAudit(&splunk.Env{})
 			}
 
 			require.NotNil(t, actual)
@@ -96,7 +96,7 @@ func TestWithHTTPClient(t *testing.T) {
 		t.Run(tc.description, func(t *testing.T) {
 			t.Parallel()
 
-			actual := NewSplunkAudit(&splunk.SplunkEnv{}, tc.given...)
+			actual := NewSplunkAudit(&splunk.Env{}, tc.given...)
 
 			require.NotNil(t, actual)
 
@@ -141,7 +141,7 @@ func TestSetHTTPClient(t *testing.T) {
 		t.Run(tc.description, func(t *testing.T) {
 			t.Parallel()
 
-			actual := NewSplunkAudit(&splunk.SplunkEnv{})
+			actual := NewSplunkAudit(&splunk.Env{})
 			tc.given(actual)
 
 			require.NotNil(t, actual)
@@ -165,7 +165,7 @@ func TestSplunkAduitWrite(t *testing.T) {
 		description string
 		given       QueryData
 		headers     func() *http.Header
-		server      func(*httptest.Server) *splunk.SplunkEnv
+		server      func(*httptest.Server) *splunk.Env
 		handler     func(*bytes.Buffer, *http.Header) func(w http.ResponseWriter, r *http.Request)
 		error       bool
 		message     string
@@ -183,8 +183,8 @@ func TestSplunkAduitWrite(t *testing.T) {
 					"User-Agent":      []string{fmt.Sprintf("GABI/%s", version.Version())},
 				}
 			},
-			func(s *httptest.Server) *splunk.SplunkEnv {
-				return &splunk.SplunkEnv{
+			func(s *httptest.Server) *splunk.Env {
+				return &splunk.Env{
 					Endpoint:  s.URL,
 					Token:     "test123",
 					Host:      "test",
@@ -216,8 +216,8 @@ func TestSplunkAduitWrite(t *testing.T) {
 					"User-Agent":      []string{fmt.Sprintf("GABI/%s", version.Version())},
 				}
 			},
-			func(s *httptest.Server) *splunk.SplunkEnv {
-				return &splunk.SplunkEnv{
+			func(s *httptest.Server) *splunk.Env {
+				return &splunk.Env{
 					Endpoint:  s.URL,
 					Token:     "test123",
 					Host:      "test",
@@ -249,8 +249,8 @@ func TestSplunkAduitWrite(t *testing.T) {
 					"User-Agent":      []string{fmt.Sprintf("GABI/%s", version.Version())},
 				}
 			},
-			func(s *httptest.Server) *splunk.SplunkEnv {
-				return &splunk.SplunkEnv{
+			func(s *httptest.Server) *splunk.Env {
+				return &splunk.Env{
 					Endpoint: s.URL,
 				}
 			},
@@ -272,8 +272,8 @@ func TestSplunkAduitWrite(t *testing.T) {
 			func() *http.Header {
 				return &http.Header{}
 			},
-			func(s *httptest.Server) *splunk.SplunkEnv {
-				return &splunk.SplunkEnv{}
+			func(s *httptest.Server) *splunk.Env {
+				return &splunk.Env{}
 			},
 			func(b *bytes.Buffer, h *http.Header) func(w http.ResponseWriter, r *http.Request) {
 				return func(w http.ResponseWriter, r *http.Request) {
@@ -290,8 +290,8 @@ func TestSplunkAduitWrite(t *testing.T) {
 			func() *http.Header {
 				return &http.Header{}
 			},
-			func(s *httptest.Server) *splunk.SplunkEnv {
-				return &splunk.SplunkEnv{
+			func(s *httptest.Server) *splunk.Env {
+				return &splunk.Env{
 					Endpoint: "http://test/%",
 				}
 			},
@@ -310,8 +310,8 @@ func TestSplunkAduitWrite(t *testing.T) {
 			func() *http.Header {
 				return &http.Header{}
 			},
-			func(s *httptest.Server) *splunk.SplunkEnv {
-				return &splunk.SplunkEnv{
+			func(s *httptest.Server) *splunk.Env {
+				return &splunk.Env{
 					Endpoint: "http://test",
 				}
 			},
@@ -336,8 +336,8 @@ func TestSplunkAduitWrite(t *testing.T) {
 					"User-Agent":      []string{fmt.Sprintf("GABI/%s", version.Version())},
 				}
 			},
-			func(s *httptest.Server) *splunk.SplunkEnv {
-				return &splunk.SplunkEnv{
+			func(s *httptest.Server) *splunk.Env {
+				return &splunk.Env{
 					Endpoint: s.URL,
 					Token:    "test123",
 				}
@@ -366,8 +366,8 @@ func TestSplunkAduitWrite(t *testing.T) {
 					"User-Agent":      []string{fmt.Sprintf("GABI/%s", version.Version())},
 				}
 			},
-			func(s *httptest.Server) *splunk.SplunkEnv {
-				return &splunk.SplunkEnv{
+			func(s *httptest.Server) *splunk.Env {
+				return &splunk.Env{
 					Endpoint: s.URL,
 					Token:    "test123",
 				}
@@ -390,8 +390,8 @@ func TestSplunkAduitWrite(t *testing.T) {
 			func() *http.Header {
 				return &http.Header{}
 			},
-			func(s *httptest.Server) *splunk.SplunkEnv {
-				return &splunk.SplunkEnv{}
+			func(s *httptest.Server) *splunk.Env {
+				return &splunk.Env{}
 			},
 			func(b *bytes.Buffer, h *http.Header) func(w http.ResponseWriter, r *http.Request) {
 				return func(w http.ResponseWriter, r *http.Request) {
@@ -414,8 +414,8 @@ func TestSplunkAduitWrite(t *testing.T) {
 					"User-Agent":      []string{fmt.Sprintf("GABI/%s", version.Version())},
 				}
 			},
-			func(s *httptest.Server) *splunk.SplunkEnv {
-				return &splunk.SplunkEnv{
+			func(s *httptest.Server) *splunk.Env {
+				return &splunk.Env{
 					Endpoint:  s.URL,
 					Token:     "test123",
 					Host:      "test",

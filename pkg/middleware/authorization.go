@@ -8,7 +8,7 @@ import (
 	gabi "github.com/app-sre/gabi/pkg"
 )
 
-func Authorization(env *gabi.Env) Middleware {
+func Authorization(cfg *gabi.Config) Middleware {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
@@ -20,19 +20,19 @@ func Authorization(env *gabi.Env) Middleware {
 				return
 			}
 
-			if len(env.UserEnv.Users) == 0 {
+			if len(cfg.UserEnv.Users) == 0 {
 				http.Error(w, "Request cannot be authorized", http.StatusUnauthorized)
 				return
 			}
-			for _, u := range env.UserEnv.Users {
+			for _, u := range cfg.UserEnv.Users {
 				if user == u {
-					ctx = context.WithValue(ctx, contextUserKey, u)
+					ctx = context.WithValue(ctx, ContextKeyUser, u)
 					h.ServeHTTP(w, r.WithContext(ctx))
 					return
 				}
 			}
 			l := "User does not have required permissions"
-			env.Logger.Errorf("%s: %s", l, user)
+			cfg.Logger.Errorf("%s: %s", l, user)
 			http.Error(w, l, http.StatusForbidden)
 		})
 	}

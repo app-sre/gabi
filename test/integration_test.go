@@ -18,6 +18,7 @@ import (
 	"github.com/app-sre/gabi/pkg/env/user"
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestHealthCheckOK(t *testing.T) {
@@ -34,7 +35,7 @@ func TestHealthCheckOK(t *testing.T) {
 
 	go func() {
 		err := cmd.Run(logger.Sugar())
-		assert.Nil(t, err)
+		require.NoError(t, err)
 	}()
 	waitForPortOpen(8080)
 
@@ -65,7 +66,7 @@ func TestHealthCheckFailure(t *testing.T) {
 
 	go func() {
 		err := cmd.Run(logger.Sugar())
-		assert.Nil(t, err)
+		require.NoError(t, err)
 	}()
 	waitForPortOpen(8080)
 
@@ -100,7 +101,7 @@ func TestQueryWithMissingHeader(t *testing.T) {
 
 	go func() {
 		err := cmd.Run(logger.Sugar())
-		assert.Nil(t, err)
+		require.NoError(t, err)
 	}()
 	waitForPortOpen(8080)
 
@@ -124,6 +125,52 @@ func TestQueryWithMissingHeader(t *testing.T) {
 	assert.Contains(t, string(body), `Request without required header: X-Forwarded-User`)
 }
 
+func TestQueryWithMalformedBase64EncodedQuery(t *testing.T) {
+	client := dummyHTTPClient()
+
+	psql := startPostgres(t)
+
+	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
+	defer os.Remove(configFile)
+
+	setEnvironment(configFile, psql.Host, strconv.Itoa(psql.DefaultPort()), "false", "test123", "localhost")
+	defer os.Clearenv()
+
+	logger := test.DummyLogger(io.Discard)
+	defer logger.Sync()
+
+	go func() {
+		err := cmd.Run(logger.Sugar())
+		require.NoError(t, err)
+	}()
+	waitForPortOpen(8080)
+
+	req, err := http.NewRequest("POST", "http://localhost:8080/query", bytes.NewBuffer([]byte(`{"query": "dGhpcyBpcyBhIHRlc3Q=="}`)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("X-Forwarded-User", "test")
+
+	q := req.URL.Query()
+	q.Add("base64_query", "true")
+
+	req.URL.RawQuery = q.Encode()
+
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	assert.Contains(t, string(body), `Unable to decode Base64-encoded query`)
+}
+
 func TestQueryWithMissingBody(t *testing.T) {
 	client := dummyHTTPClient()
 
@@ -140,7 +187,7 @@ func TestQueryWithMissingBody(t *testing.T) {
 
 	go func() {
 		err := cmd.Run(logger.Sugar())
-		assert.Nil(t, err)
+		require.NoError(t, err)
 	}()
 	waitForPortOpen(8080)
 
@@ -183,7 +230,7 @@ func TestQueryWithExpiredInstance(t *testing.T) {
 
 	go func() {
 		err := cmd.Run(logger.Sugar())
-		assert.Nil(t, err)
+		require.NoError(t, err)
 	}()
 	waitForPortOpen(8080)
 
@@ -224,7 +271,7 @@ func TestQueryWithUnauthorizedAccess(t *testing.T) {
 
 	go func() {
 		err := cmd.Run(logger.Sugar())
-		assert.Nil(t, err)
+		require.NoError(t, err)
 	}()
 	waitForPortOpen(8080)
 
@@ -264,7 +311,7 @@ func TestQueryWithForbiddenUserAccess(t *testing.T) {
 
 	go func() {
 		err := cmd.Run(logger.Sugar())
-		assert.Nil(t, err)
+		require.NoError(t, err)
 	}()
 	waitForPortOpen(8080)
 
@@ -307,7 +354,7 @@ func TestQueryWithAccessUsingEnvironment(t *testing.T) {
 
 	go func() {
 		err := cmd.Run(logger.Sugar())
-		assert.Nil(t, err)
+		require.NoError(t, err)
 	}()
 	waitForPortOpen(8080)
 
@@ -353,7 +400,7 @@ func TestQueryWithAccessUsingDeprecatedUsersFile(t *testing.T) {
 
 	go func() {
 		err := cmd.Run(logger.Sugar())
-		assert.Nil(t, err)
+		require.NoError(t, err)
 	}()
 	waitForPortOpen(8080)
 
@@ -395,7 +442,7 @@ func TestQueryWithAccessFailureUsingDeprecatedUsersFile(t *testing.T) {
 
 	go func() {
 		err := cmd.Run(logger.Sugar())
-		assert.Nil(t, err)
+		require.NoError(t, err)
 	}()
 	waitForPortOpen(8080)
 
@@ -448,7 +495,7 @@ func TestQueryWithSplunkWrite(t *testing.T) {
 
 	go func() {
 		err := cmd.Run(logger.Sugar())
-		assert.Nil(t, err)
+		require.NoError(t, err)
 	}()
 	waitForPortOpen(8080)
 
@@ -499,7 +546,7 @@ func TestQueryWithSplunkWriteFailure(t *testing.T) {
 
 	go func() {
 		err := cmd.Run(logger.Sugar())
-		assert.Nil(t, err)
+		require.NoError(t, err)
 	}()
 	waitForPortOpen(8080)
 
@@ -554,7 +601,7 @@ func TestQueryWithDatabaseWriteAccess(t *testing.T) {
 
 	go func() {
 		err := cmd.Run(logger.Sugar())
-		assert.Nil(t, err)
+		require.NoError(t, err)
 	}()
 	waitForPortOpen(8080)
 
@@ -633,4 +680,124 @@ func TestQueryWithDatabaseWriteAccessFailure(t *testing.T) {
 	assert.Contains(t, output.String(), `Unable to query database`)
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	assert.Contains(t, string(body), `cannot execute DROP TABLE in a read-only transaction`)
+}
+
+func TestQueryWithBase64EncodedQuery(t *testing.T) {
+	client := dummyHTTPClient()
+	splunkPassword := "foobarPassword123!"
+
+	psql := startPostgres(t)
+	splunk := startSplunk(t, splunkPassword)
+
+	token := createSplunkIngestToken(t, client, "localhost", strconv.Itoa(splunk.Port("api")), splunkPassword)
+
+	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
+	defer os.Remove(configFile)
+
+	setEnvironment(
+		configFile,
+		psql.Host,
+		strconv.Itoa(psql.DefaultPort()),
+		"false",
+		token,
+		fmt.Sprintf("https://%s:%d", "localhost", splunk.Port("collector")),
+	)
+	defer os.Clearenv()
+
+	var output bytes.Buffer
+
+	logger := test.DummyLogger(&output)
+	defer logger.Sync()
+
+	go func() {
+		err := cmd.Run(logger.Sugar())
+		assert.Nil(t, err)
+	}()
+	waitForPortOpen(8080)
+
+	req, err := http.NewRequest("POST", "http://localhost:8080/query", bytes.NewBuffer([]byte(`{"query":"c2VsZWN0IDE7"}`)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("X-Forwarded-User", "test")
+
+	q := req.URL.Query()
+	q.Add("base64_query", "true")
+
+	req.URL.RawQuery = q.Encode()
+
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Contains(t, output.String(), `"Query": "select 1;"`)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Contains(t, string(body), `{"result":[["?column?"],["1"]],"error":""}`)
+}
+
+func TestQueryWithBase64EncodedResults(t *testing.T) {
+	client := dummyHTTPClient()
+	splunkPassword := "foobarPassword123!"
+
+	psql := startPostgres(t)
+	splunk := startSplunk(t, splunkPassword)
+
+	token := createSplunkIngestToken(t, client, "localhost", strconv.Itoa(splunk.Port("api")), splunkPassword)
+
+	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
+	defer os.Remove(configFile)
+
+	setEnvironment(
+		configFile,
+		psql.Host,
+		strconv.Itoa(psql.DefaultPort()),
+		"false",
+		token,
+		fmt.Sprintf("https://%s:%d", "localhost", splunk.Port("collector")),
+	)
+	defer os.Clearenv()
+
+	var output bytes.Buffer
+
+	logger := test.DummyLogger(&output)
+	defer logger.Sync()
+
+	go func() {
+		err := cmd.Run(logger.Sugar())
+		assert.Nil(t, err)
+	}()
+	waitForPortOpen(8080)
+
+	req, err := http.NewRequest("POST", "http://localhost:8080/query", bytes.NewBuffer([]byte(`{"query":"select current_schema();"}`)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("X-Forwarded-User", "test")
+
+	q := req.URL.Query()
+	q.Add("base64_results", "true")
+
+	req.URL.RawQuery = q.Encode()
+
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Contains(t, output.String(), `"Query": "select current_schema();"`)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Contains(t, string(body), `{"result":[["current_schema"],["cHVibGlj"]],"error":""}`)
 }

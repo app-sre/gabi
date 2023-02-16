@@ -24,7 +24,7 @@ const (
 )
 
 type SplunkAudit struct {
-	SplunkEnv *splunk.SplunkEnv
+	SplunkEnv *splunk.Env
 
 	client *http.Client
 }
@@ -55,7 +55,7 @@ func WithHTTPClient(client *http.Client) Option {
 	}
 }
 
-func NewSplunkAudit(splunk *splunk.SplunkEnv, options ...Option) *SplunkAudit {
+func NewSplunkAudit(splunk *splunk.Env, options ...Option) *SplunkAudit {
 	s := &SplunkAudit{SplunkEnv: splunk}
 
 	s.client = &http.Client{
