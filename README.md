@@ -117,6 +117,49 @@ $ curl -s 'http://localhost:8080/query' -X POST -H 'X-Forwarded-User: test' -d '
 }
 ```
 
+Using a Base64-encoded query when making a request can help alleviate some of the challenges of complex queries (SQL
+statements) that include a combination of quotes, and other characters that the JSON standard considers reserved can
+often be problematic, especially as ensuring that challenging parts of the SQL query have been correctly escaped can be
+quite involved and error-prone. When passing a Base64-encoded query string, make sure that the `base64_query=true` query
+parameter is set when making a request. For example:
+
+```
+$ echo -n "select table_name from information_schema.tables where table_schema='public'" | base64 | tr -d '\n'
+c2VsZWN0IHRhYmxlX25hbWUgZnJvbSBpbmZvcm1hdGlvbl9zY2hlbWEudGFibGVzIHdoZXJlIHRhYmxlX3NjaGVtYT0ncHVibGljJw==
+
+$ curl -s 'http://localhost:8080/query?base64_query=true' -X POST -H 'X-Forwarded-User: test' -d '{"query":"c2VsZWN0IHRhYmxlX25hbWUgZnJvbSBpbmZvcm1hdGlvbl9zY2hlbWEudGFibGVzIHdoZXJlIHRhYmxlX3NjaGVtYT0ncHVibGljJw=="}' | jq
+{
+  "result": [
+    [
+      "table_name"
+    ],
+    [
+      "persons"
+    ]
+  ],
+  "error": ""
+}
+```
+
+A Base64-encoding can also be applied to the results. This enables rich data, such as embedded JSON documents, to be
+passed without a need to escape quotes and any other special characters to be included in the response. To apply
+Base64-encoding to the results, pass a `base64_results=true` query parameter when making a request. For example:
+
+```
+$ curl -s 'http://localhost:8080/query' -X POST -H 'X-Forwarded-User: test' -d '{"query":"select * from books;"}'
+{"result":[["data"],["{\"title\": \"Deep Work: Rules for Focused Success in a Distracted World\", \"author\": \"Cal Newport\", \"genres\": [\"Productivity\", \"Reference\"]}"]],"error":""}
+
+$ curl -s 'http://localhost:8080/query?base64_results=true' -X POST -H 'X-Forwarded-User: test' -d '{"query":"select * from books;"}'
+{"result":[["data"],["eyJ0aXRsZSI6ICJEZWVwIFdvcms6IFJ1bGVzIGZvciBGb2N1c2VkIFN1Y2Nlc3MgaW4gYSBEaXN0cmFjdGVkIFdvcmxkIiwgImF1dGhvciI6ICJDYWwgTmV3cG9ydCIsICJnZW5yZXMiOiBbIlByb2R1Y3Rpdml0eSIsICJSZWZlcmVuY2UiXX0="]],"error":""}
+
+$ cat - | base64 -d
+eyJ0aXRsZSI6ICJEZWVwIFdvcms6IFJ1bGVzIGZvciBGb2N1c2VkIFN1Y2Nlc3MgaW4gYSBEaXN0cmFjdGVkIFdvcmxkIiwgImF1dGhvciI6ICJDYWwgTmV3cG9ydCIsICJnZW5yZXMiOiBbIlByb2R1Y3Rpdml0eSIsICJSZWZlcmVuY2UiXX0=
+{"title": "Deep Work: Rules for Focused Success in a Distracted World", "author": "Cal Newport", "genres": ["Productivity", "Reference"]}
+```
+
+Note: almost every modern and well-behaved JSON parser would attempt to unescape quotes and handle reserved characters
+correctly.
+
 ## Detailed Operation
 
 `TODO`
