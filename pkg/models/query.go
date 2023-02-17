@@ -1,7 +1,7 @@
 package models
 
 type QueryRequest struct {
-	Query string
+	Query string `json:"query"`
 }
 
 type QueryResponse struct {
