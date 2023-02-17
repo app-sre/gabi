@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -73,7 +72,7 @@ func Query(cfg *gabi.Config) http.HandlerFunc {
 			}
 		}
 
-		tx, err := cfg.DB.BeginTx(context.Background(), &sql.TxOptions{
+		tx, err := cfg.DB.BeginTx(ctx, &sql.TxOptions{
 			ReadOnly: !cfg.DBEnv.AllowWrite,
 		})
 		if err != nil {
