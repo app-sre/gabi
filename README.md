@@ -118,10 +118,10 @@ $ curl -s 'http://localhost:8080/query' -X POST -H 'X-Forwarded-User: test' -d '
 ```
 
 Using a Base64-encoded query when making a request can help alleviate some of the challenges of complex queries (SQL
-statements) that include a combination of quotes, and other characters that the JSON standard considers reserved can
-often be problematic, especially as ensuring that challenging parts of the SQL query have been correctly escaped can be
-quite involved and error-prone. When passing a Base64-encoded query string, make sure that the `base64_query=true` query
-parameter is set when making a request. For example:
+statements) that include a combination of quotes or other characters that the JSON standard considers reserved and can
+often be problematic, as ensuring that parts of the SQL query have been correctly escaped can be quite involved and
+error-prone. When passing a Base64-encoded query string, ensure that the `base64_query=true` query parameter is set when
+making a request. For example:
 
 ```
 $ echo -n "select table_name from information_schema.tables where table_schema='public'" | base64 | tr -d '\n'
@@ -163,6 +163,21 @@ correctly.
 ## Detailed Operation
 
 `TODO`
+
+## Limitations
+
+Using JSON to convey different data types that modern databases support can be challenging. Simply put, JSON is
+ill-equipped to represent rich data and complex types correctly - it does not convey any type information, and its
+supported types range is limited.
+
+Thus, to reduce ambiguity and potential type conversions issues due to differences that various programming languages
+and JSON parses can employ when converting values sent over the wire to the internal representation for specific native
+types, a decision has been made to encode most of the values returned upon executing an SQL query as strings - this
+means that numerics (integer and floating-point values), dates and other myriads of complex types and values are
+string-encoded.
+
+Another set of limitations stems from using HTTP as the transport protocol of choice, such as content encoding or the
+request and response data size.
 
 ## Environment Variables
 
