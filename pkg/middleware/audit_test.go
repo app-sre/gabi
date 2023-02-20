@@ -504,7 +504,7 @@ func TestAudit(t *testing.T) {
 			logger := test.DummyLogger(&output).Sugar()
 			encoder := base64.StdEncoding
 
-			la := &audit.LoggerAudit{Logger: logger}
+			la := &audit.ConsoleAudit{Logger: logger}
 			sa := &audit.SplunkAudit{SplunkEnv: tc.given(s)}
 			sa.SetHTTPClient(http.DefaultClient)
 

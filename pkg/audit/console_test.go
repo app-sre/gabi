@@ -19,7 +19,7 @@ func TestNewLoggerAudit(t *testing.T) {
 	actual := NewLoggerAudit(logger)
 
 	require.NotNil(t, actual)
-	assert.IsType(t, &LoggerAudit{}, actual)
+	assert.IsType(t, &ConsoleAudit{}, actual)
 }
 
 func TestLoggingAuditWrite(t *testing.T) {
@@ -56,7 +56,7 @@ func TestLoggingAuditWrite(t *testing.T) {
 
 			logger := test.DummyLogger(&output).Sugar()
 
-			audit := &LoggerAudit{Logger: logger}
+			audit := &ConsoleAudit{Logger: logger}
 			err := audit.Write(&tc.given)
 
 			require.NoError(t, err)
