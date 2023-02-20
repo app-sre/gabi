@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"time"
 
-	gorillaHandlers "github.com/gorilla/handlers"
+	gorillahandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
 	"go.uber.org/zap"
@@ -93,7 +93,7 @@ func Run(logger *zap.SugaredLogger) error {
 	if !gabi.Production() {
 		healthLogOutput = defaultLogOutput
 	}
-	logHandler := gorillaHandlers.LoggingHandler
+	logHandler := gorillahandlers.LoggingHandler
 
 	queryChain := alice.New(
 		alice.Constructor(middleware.Recovery(cfg)),
