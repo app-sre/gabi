@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -25,7 +26,7 @@ func NewUserEnv() *Env {
 
 func (u *Env) Populate() error {
 	if path := os.Getenv("USERS_FILE_PATH"); path != "" {
-		file, err := os.Open(path)
+		file, err := os.Open(filepath.Clean(path))
 		if err != nil {
 			return fmt.Errorf("unable to read users file: %w", err)
 		}
@@ -43,7 +44,7 @@ func (u *Env) Populate() error {
 	}
 
 	if path := os.Getenv("CONFIG_FILE_PATH"); path != "" {
-		content, err := os.ReadFile(path)
+		content, err := os.ReadFile(filepath.Clean(path))
 		if err != nil {
 			return fmt.Errorf("unable to read users file: %w", err)
 		}
