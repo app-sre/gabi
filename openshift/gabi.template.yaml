@@ -16,7 +16,7 @@ objects:
       app: ${GABI_INSTANCE}
     name: ${GABI_INSTANCE}
     annotations:
-      ignore-check.kube-linter.io/minimum-three-replicas: "Gabi does not need 3 replicas"
+      ignore-check.kube-linter.io/minimum-three-replicas: "GABI does not need 3 replicas"
   spec:
     replicas: ${{REPLICAS}}
     selector:
@@ -98,7 +98,7 @@ objects:
             periodSeconds: 10
             successThreshold: 1
           volumeMounts:
-          - name: gabi-users
+          - name: gabi-config
             mountPath: /config
           env:
           - name: HOST
@@ -152,8 +152,8 @@ objects:
               secretKeyRef:
                 key: db.name
                 name: ${AWS_RDS_SECRET_NAME}
-          - name: USERS_FILE_PATH
-            value: ${USERS_FILE_PATH}
+          - name: CONFIG_FILE_PATH
+            value: ${CONFIG_FILE_PATH}
           resources:
             requests:
               cpu: 100m
@@ -165,7 +165,7 @@ objects:
         - name: gabi-tls
           secret:
             secretName: ${GABI_INSTANCE}-tls
-        - name: gabi-users
+        - name: gabi-config
           configMap:
             optional: true
             name: ${GABI_INSTANCE}
@@ -254,10 +254,10 @@ parameters:
   required: true
 - name: SPLUNK_ENDPOINT
   required: true
+- name: CONFIG_FILE_PATH
+  value: /config/config.json
 - name: GABI_INSTANCE
   value: gabi-instance
-- name: USERS_FILE_PATH
-  value: /config/authorized-users.yaml
 - name: CERT_MANAGER_ISSUER_KIND
   value: ClusterIssuer
 - name: CERT_MANAGER_ISSUER_NAME
