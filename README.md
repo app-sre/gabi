@@ -70,17 +70,14 @@ Note: the expiration date has to be set in the future.
 }
  ```
 
-To use the deprecated users file, create a text file (historically, the file name as been `authorized-users.yaml`) and
-then set its path using `USERS_FILE_PATH`:
+You can override the expiration date set in the configuration file using the `EXPIRATION_DATE` environment variable
+using the same format as the expiration attribute the configuration file uses. Whereas the list of authorized users can
+be overridden using the `AUTHORIZED_USERS` environment variable, which takes a comma-separated list of usernames.
 
-
-```
-user1
-user2
-```
-
-Note: using the deprecated users file will disable support of the explicit expiration date in GABI, leaving only the
-legacy implicit one active.
+The configuration file or the environment variables must provide the expiration date and the authorized users. However,
+suppose you provide both of the environment variables. In that case, you do not need to provide the configuration file.
+Still, if you provide these, values provided via the environment variables will take precedence and override values set
+in the configuration file.
 
 Next, start the GABI server instance:
 
@@ -99,7 +96,7 @@ $ go run cmd/gabi/main.go
 127.0.0.1 - - [09/Feb/2023:11:36:47 +0900] "POST /query HTTP/1.1" 200 39
 ```
 
-An example query against a PostgreSQL to check for the existance of a specific table in the database (single quotes need
+An example query against a PostgreSQL to check for the existence of a specific table in the database (single quotes need
 to be replaced with `'\''` in queries run with curl):
 
 ```

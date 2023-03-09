@@ -133,38 +133,6 @@ func TestPopulate(t *testing.T) {
 			``,
 		},
 		{
-			"legacy users file support",
-			func() string {
-				file, err := os.CreateTemp("", "user-")
-				if err != nil {
-					t.Fatal(err)
-				}
-				_, err = file.WriteString(`test`)
-				if err != nil {
-					t.Fatal(err)
-				}
-				t.Setenv("USERS_FILE_PATH", file.Name())
-				return file.Name()
-			},
-			&Env{Users: []string{"test"}},
-			false,
-			``,
-		},
-		{
-			"empty legacy users file support",
-			func() string {
-				file, err := os.CreateTemp("", "user-")
-				if err != nil {
-					t.Fatal(err)
-				}
-				t.Setenv("USERS_FILE_PATH", file.Name())
-				return file.Name()
-			},
-			&Env{},
-			false,
-			``,
-		},
-		{
 			"invalid configuration file",
 			func() string {
 				t.Setenv("CONFIG_FILE_PATH", "test")
@@ -173,16 +141,6 @@ func TestPopulate(t *testing.T) {
 			&Env{},
 			true,
 			`unable to read users file: open test`,
-		},
-		{
-			"invalid legacy users file",
-			func() string {
-				t.Setenv("USERS_FILE_PATH", "test")
-				return ""
-			},
-			&Env{},
-			true,
-			`unable to read users file`,
 		},
 		{
 			"invalid configuration file JSON content",
@@ -222,43 +180,6 @@ func TestPopulate(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 			}
-
-			assert.Equal(t, tc.expected, actual)
-		})
-	}
-}
-
-func TestIsDeprecated(t *testing.T) {
-	t.Parallel()
-
-	cases := []struct {
-		description string
-		given       Env
-		expected    bool
-	}{
-		{
-			"not deprecated with expiration date set",
-			Env{Expiration: time.Now()},
-			false,
-		},
-		{
-			"deprecated with default expiration date value set",
-			Env{Expiration: time.Time{}},
-			true,
-		},
-		{
-			"deprecated with nothing set",
-			Env{},
-			true,
-		},
-	}
-
-	for _, tc := range cases {
-		tc := tc
-		t.Run(tc.description, func(t *testing.T) {
-			t.Parallel()
-
-			actual := tc.given.IsDeprecated()
 
 			assert.Equal(t, tc.expected, actual)
 		})

@@ -43,11 +43,6 @@ func Run(logger *zap.SugaredLogger) error {
 
 	expiry := usere.IsExpired()
 	date := usere.Expiration.Format(user.ExpiryDateLayout)
-	if usere.IsDeprecated() {
-		expiry = len(usere.Users) == 0
-		date = "UNKNOWN"
-	}
-
 	logger.Infof("Production: %t, expired: %t (expiration date: %s)", gabi.Production(), expiry, date)
 	logger.Debugf("Authorized users: %v", usere.Users)
 

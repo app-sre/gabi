@@ -1,7 +1,6 @@
 package user
 
 import (
-	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -25,24 +24,6 @@ func NewUserEnv() *Env {
 }
 
 func (u *Env) Populate() error {
-	if path := os.Getenv("USERS_FILE_PATH"); path != "" {
-		file, err := os.Open(filepath.Clean(path))
-		if err != nil {
-			return fmt.Errorf("unable to read users file: %w", err)
-		}
-		defer func() { _ = file.Close() }()
-
-		scanner := bufio.NewScanner(file)
-		scanner.Split(bufio.ScanLines)
-		for scanner.Scan() {
-			if s := strings.Trim(scanner.Text(), " "); s != "" {
-				u.Users = append(u.Users, s)
-			}
-		}
-
-		return nil
-	}
-
 	if path := os.Getenv("CONFIG_FILE_PATH"); path != "" {
 		content, err := os.ReadFile(filepath.Clean(path))
 		if err != nil {
@@ -80,14 +61,7 @@ func (u *Env) Populate() error {
 	return nil
 }
 
-func (u *Env) IsDeprecated() bool {
-	return u.Expiration == (time.Time{})
-}
-
 func (u *Env) IsExpired() bool {
-	if u.IsDeprecated() {
-		return len(u.Users) == 0
-	}
 	return u.Expiration.Before(time.Now())
 }
 
