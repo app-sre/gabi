@@ -156,11 +156,11 @@ objects:
             value: ${CONFIG_FILE_PATH}
           resources:
             requests:
-              cpu: 100m
-              memory: 128Mi
+              cpu: ${CPU_REQUESTS}
+              memory: ${MEMORY_REQUESTS}
             limits:
-              cpu: 200m
-              memory: 256Mi
+              cpu: ${CPU_LIMIT}
+              memory: ${MEMORY_LIMIT}
         volumes:
         - name: gabi-tls
           secret:
@@ -232,6 +232,14 @@ parameters:
   value: latest
 - name: REPLICAS
   value: "1"
+- name: CPU_REQUESTS
+  value: 100m
+- name: CPU_LIMIT
+  value: 200m
+- name: MEMORY_REQUESTS
+  value: 128Mi
+- name: MEMORY_LIMIT
+  value: 256Mi
 - name: SERVER_TIMEOUT
   value: 30s
 - name: OAUTH_PROXY_IMAGE_NAME
