@@ -156,8 +156,8 @@ objects:
             value: ${CONFIG_FILE_PATH}
           resources:
             requests:
-              cpu: ${CPU_REQUESTS}
-              memory: ${MEMORY_REQUESTS}
+              cpu: ${CPU_REQUEST}
+              memory: ${MEMORY_REQUEST}
             limits:
               cpu: ${CPU_LIMIT}
               memory: ${MEMORY_LIMIT}
@@ -232,11 +232,11 @@ parameters:
   value: latest
 - name: REPLICAS
   value: "1"
-- name: CPU_REQUESTS
+- name: CPU_REQUEST
   value: 100m
 - name: CPU_LIMIT
   value: 200m
-- name: MEMORY_REQUESTS
+- name: MEMORY_REQUEST
   value: 128Mi
 - name: MEMORY_LIMIT
   value: 256Mi
