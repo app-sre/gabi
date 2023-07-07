@@ -68,6 +68,8 @@ objects:
           - --provider=openshift
           - --openshift-service-account=${GABI_INSTANCE}
           - --upstream=http://localhost:8080
+          # Reserved for future use.
+          # - --upstream-timeout=${OAUTH_PROXY_UPSTREAM_TIMEOUT}
           - '--openshift-delegate-urls={"/": {"resource": "namespaces", "verb": "get", "name": "${NAMESPACE}", "namespace": "${NAMESPACE}"}}'
           - --tls-cert=/etc/tls/private/tls.crt
           - --tls-key=/etc/tls/private/tls.key
@@ -154,6 +156,8 @@ objects:
                 name: ${AWS_RDS_SECRET_NAME}
           - name: CONFIG_FILE_PATH
             value: ${CONFIG_FILE_PATH}
+          - name: REQUEST_TIMEOUT
+            value: ${REQUEST_TIMEOUT}
           resources:
             requests:
               cpu: ${CPU_REQUEST}
@@ -245,7 +249,9 @@ parameters:
 - name: OAUTH_PROXY_IMAGE_NAME
   value: quay.io/openshift/origin-oauth-proxy
 - name: OAUTH_PROXY_IMAGE_TAG
-  value: "4.10.0"
+  value: "4.14.0"
+- name: OAUTH_PROXY_UPSTREAM_TIMEOUT
+  value: "30s"
 - name: DB_DRIVER
   value: pgx
 - name: DB_WRITE
@@ -264,6 +270,8 @@ parameters:
   required: true
 - name: CONFIG_FILE_PATH
   value: /config/config.json
+- name: REQUEST_TIMEOUT
+  value: "30s"
 - name: GABI_INSTANCE
   value: gabi-instance
 - name: CERT_MANAGER_ISSUER_KIND

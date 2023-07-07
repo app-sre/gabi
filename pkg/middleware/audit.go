@@ -85,9 +85,9 @@ func Audit(cfg *gabi.Config) Middleware {
 				User:      user,
 				Timestamp: now.Unix(),
 			}
-			_ = cfg.LoggerAudit.Write(query)
+			_ = cfg.LoggerAudit.Write(ctx, query)
 
-			if err := cfg.SplunkAudit.Write(query); err != nil {
+			if err := cfg.SplunkAudit.Write(ctx, query); err != nil {
 				cfg.Logger.Errorf("Unable to send audit to Splunk: %s", err)
 				http.Error(w, "An internal error has occurred", http.StatusInternalServerError)
 				return

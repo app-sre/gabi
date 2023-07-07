@@ -19,6 +19,7 @@ func TestRecovery(t *testing.T) {
 		description string
 		given       http.HandlerFunc
 		code        int
+		body        string
 		error       bool
 		want        string
 	}{
@@ -28,6 +29,7 @@ func TestRecovery(t *testing.T) {
 				// No-op.
 			}),
 			200,
+			``,
 			false,
 			``,
 		},
@@ -37,6 +39,7 @@ func TestRecovery(t *testing.T) {
 				panic("test")
 			}),
 			500,
+			`An internal error has occurred`,
 			false,
 			`Recovered from an error: test`,
 		},
@@ -46,6 +49,7 @@ func TestRecovery(t *testing.T) {
 				panic(http.ErrAbortHandler)
 			}),
 			0,
+			``,
 			true,
 			``,
 		},
@@ -74,6 +78,7 @@ func TestRecovery(t *testing.T) {
 			_, _ = io.Copy(&body, actual.Body)
 
 			assert.Equal(t, tc.code, actual.StatusCode)
+			assert.Contains(t, body.String(), tc.body)
 			assert.Contains(t, output.String(), tc.want)
 
 			if tc.error {

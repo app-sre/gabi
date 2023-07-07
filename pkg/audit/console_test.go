@@ -2,6 +2,7 @@ package audit
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"regexp"
 	"testing"
@@ -57,7 +58,7 @@ func TestLoggingAuditWrite(t *testing.T) {
 			logger := test.DummyLogger(&output).Sugar()
 
 			audit := &ConsoleAudit{Logger: logger}
-			err := audit.Write(&tc.given)
+			err := audit.Write(context.TODO(), &tc.given)
 
 			require.NoError(t, err)
 			assert.Regexp(t, tc.want, output.String())

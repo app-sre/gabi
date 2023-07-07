@@ -373,6 +373,60 @@ func TestQueryWithAccessUsingEnvironment(t *testing.T) {
 	assert.Contains(t, output.String(), `Authorized users: [test]`)
 }
 
+func TestQueryWithRequestTimedOut(t *testing.T) {
+	client := dummyHTTPClient()
+	splunkPassword := "foobarPassword123!"
+
+	psql := startPostgres(t)
+	splunk := startSplunk(t, splunkPassword)
+
+	token := createSplunkIngestToken(t, client, "localhost", strconv.Itoa(splunk.Port("api")), splunkPassword)
+
+	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
+	defer os.Remove(configFile)
+
+	os.Setenv("REQUEST_TIMEOUT", "5s")
+
+	setEnvironment(
+		configFile,
+		psql.Host,
+		strconv.Itoa(psql.DefaultPort()),
+		"false",
+		token,
+		fmt.Sprintf("https://%s:%d", "localhost", splunk.Port("collector")),
+	)
+	defer os.Clearenv()
+
+	logger := test.DummyLogger(io.Discard)
+	defer logger.Sync()
+
+	go func() {
+		err := cmd.Run(logger.Sugar())
+		require.NoError(t, err)
+	}()
+	waitForPortOpen(8080)
+
+	req, err := http.NewRequest("POST", "http://localhost:8080/query", bytes.NewBuffer([]byte(`{"query":"select pg_sleep(10);"}`)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("X-Forwarded-User", "test")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
+	assert.Contains(t, string(body), `Request timed out`)
+}
+
 func TestQueryWithSplunkWrite(t *testing.T) {
 	client := dummyHTTPClient()
 	splunkPassword := "foobarPassword123!"

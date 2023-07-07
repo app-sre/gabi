@@ -82,7 +82,7 @@ func Query(cfg *gabi.Config) http.HandlerFunc {
 		}
 		defer func() { _ = tx.Rollback() }()
 
-		rows, err := tx.Query(request.Query)
+		rows, err := tx.QueryContext(ctx, request.Query)
 		if err != nil {
 			cfg.Logger.Errorf("Unable to query database: %s", err)
 			_ = queryErrorResponse(w, err)
@@ -179,7 +179,11 @@ func queryErrorResponse(w http.ResponseWriter, err error) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(http.StatusBadRequest)
 
-	return json.NewEncoder(w).Encode(&models.QueryResponse{
+	err = json.NewEncoder(w).Encode(&models.QueryResponse{
 		Error: err.Error(),
 	})
+	if err != nil {
+		return fmt.Errorf("unable to marshal error response: %w", err)
+	}
+	return nil
 }

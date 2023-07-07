@@ -2,6 +2,7 @@ package audit
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -451,7 +452,7 @@ func TestSplunkAduitWrite(t *testing.T) {
 
 			actual := &SplunkAudit{SplunkEnv: tc.server(s)}
 			actual.SetHTTPClient(http.DefaultClient)
-			err := actual.Write(&tc.given)
+			err := actual.Write(context.TODO(), &tc.given)
 
 			if tc.error {
 				require.Error(t, err)
