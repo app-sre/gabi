@@ -1,5 +1,7 @@
 package audit
 
+import "context"
+
 type QueryData struct {
 	Query     string
 	User      string
@@ -9,5 +11,5 @@ type QueryData struct {
 }
 
 type Audit interface {
-	Write(*QueryData) error
+	Write(context.Context, *QueryData) error
 }

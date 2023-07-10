@@ -9,7 +9,6 @@ import (
 	"net"
 	"net/http"
 	"strconv"
-	"time"
 
 	gorillahandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -24,12 +23,6 @@ import (
 	"github.com/app-sre/gabi/pkg/handlers"
 	"github.com/app-sre/gabi/pkg/middleware"
 	"github.com/app-sre/gabi/pkg/version"
-)
-
-const (
-	readTimeout       = 1 * time.Minute
-	readHeaderTimeout = 20 * time.Second
-	writeTimeout      = 2 * time.Minute
 )
 
 func Run(logger *zap.SugaredLogger) error {
@@ -60,8 +53,6 @@ func Run(logger *zap.SugaredLogger) error {
 	defer db.Close()
 	logger.Debugf("Connected to database host: %s (port: %d)", dbe.Host, dbe.Port)
 
-	la := audit.NewLoggerAudit(logger)
-
 	se := splunk.NewSplunkEnv()
 	err = se.Populate()
 	if err != nil {
@@ -69,19 +60,18 @@ func Run(logger *zap.SugaredLogger) error {
 	}
 	logger.Infof("Sending audit to Splunk endpoint: %s", se.Endpoint)
 
-	sa := audit.NewSplunkAudit(se)
-
 	cfg := &gabi.Config{
 		DB:          db,
 		DBEnv:       dbe,
 		UserEnv:     usere,
-		LoggerAudit: la,
-		SplunkAudit: sa,
+		LoggerAudit: audit.NewLoggerAudit(logger),
+		SplunkAudit: audit.NewSplunkAudit(se),
 		Logger:      logger,
 		Encoder:     base64.StdEncoding,
 	}
+	timeout := gabi.RequestTimeout()
 
-	// Temp workaround for easy to access io.Writer.
+	// Temporary workaround for easy to access io.Writer.
 	defaultLogOutput := log.Default().Writer()
 
 	healthLogOutput := io.Discard
@@ -95,6 +85,7 @@ func Run(logger *zap.SugaredLogger) error {
 		alice.Constructor(middleware.Authorization(cfg)),
 		alice.Constructor(middleware.Expiration(cfg)),
 		alice.Constructor(middleware.Audit(cfg)),
+		alice.Constructor(middleware.Timeout(timeout)),
 	)
 	queryHandler := queryChain.Then(handlers.Query(cfg))
 
@@ -106,11 +97,10 @@ func Run(logger *zap.SugaredLogger) error {
 	logger.Infof("HTTP server starting on port: %d", port)
 
 	server := &http.Server{
-		Addr:              net.JoinHostPort("", strconv.Itoa(port)),
-		Handler:           r,
-		ReadTimeout:       readTimeout,
-		ReadHeaderTimeout: readHeaderTimeout,
-		WriteTimeout:      writeTimeout,
+		Addr:         net.JoinHostPort("", strconv.Itoa(port)),
+		Handler:      r,
+		ReadTimeout:  gabi.DefaultReadTimeout,
+		WriteTimeout: gabi.DefaultWriteTimeout,
 	}
 	if err := server.ListenAndServe(); err != nil {
 		return fmt.Errorf("unable to start HTTP server: %w", err)

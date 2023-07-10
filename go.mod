@@ -8,7 +8,7 @@ require (
 	github.com/go-sql-driver/mysql v1.7.0
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
-	github.com/jackc/pgx/v4 v4.18.0
+	github.com/jackc/pgx/v4 v4.18.1
 	github.com/justinas/alice v1.2.0
 	github.com/orlangure/gnomock v0.24.0
 	github.com/stretchr/testify v1.8.1

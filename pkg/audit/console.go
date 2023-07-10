@@ -1,6 +1,8 @@
 package audit
 
 import (
+	"context"
+
 	"go.uber.org/zap"
 )
 
@@ -14,7 +16,7 @@ func NewLoggerAudit(logger *zap.SugaredLogger) *ConsoleAudit {
 	return &ConsoleAudit{Logger: logger}
 }
 
-func (d *ConsoleAudit) Write(q *QueryData) error {
+func (d *ConsoleAudit) Write(_ context.Context, q *QueryData) error {
 	d.Logger.Infow("AUDIT",
 		"Query", q.Query,
 		"User", q.User,

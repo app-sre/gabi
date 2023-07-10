@@ -80,7 +80,7 @@ func (d *SplunkAudit) SetHTTPClient(client *http.Client) {
 	d.client = client
 }
 
-func (d *SplunkAudit) Write(q *QueryData) error {
+func (d *SplunkAudit) Write(ctx context.Context, q *QueryData) error {
 	query := &SplunkQueryData{
 		Index:      d.SplunkEnv.Index,
 		Host:       d.SplunkEnv.Host,
@@ -103,7 +103,7 @@ func (d *SplunkAudit) Write(q *QueryData) error {
 
 	url := fmt.Sprintf("%s/services/collector/event", d.SplunkEnv.Endpoint)
 
-	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+	ctx, cancel := context.WithTimeout(ctx, requestTimeout)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(content))
