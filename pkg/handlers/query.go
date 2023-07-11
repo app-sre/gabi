@@ -93,7 +93,7 @@ func Query(cfg *gabi.Config) http.HandlerFunc {
 		// Remember to check err afterwards.
 		cols, err := rows.Columns()
 		if err != nil {
-			cfg.Logger.Errorf("Unable to process database query: %s", err)
+			cfg.Logger.Errorf("Unable to process database columns: %s", err)
 			_ = queryErrorResponse(w, err)
 			return
 		}
@@ -117,7 +117,7 @@ func Query(cfg *gabi.Config) http.HandlerFunc {
 			// and you can use type introspection and type assertions
 			// to fetch the column into a typed variable.
 			if err != nil {
-				cfg.Logger.Errorf("Unable to process database query: %s", err)
+				cfg.Logger.Errorf("Unable to process database rows: %s", err)
 				_ = queryErrorResponse(w, err)
 				return
 			}
@@ -144,7 +144,7 @@ func Query(cfg *gabi.Config) http.HandlerFunc {
 
 		err = rows.Err()
 		if err != nil {
-			cfg.Logger.Errorf("Unable to process database query: %s", err)
+			cfg.Logger.Errorf("Unable to process database rows: %s", err)
 			_ = queryErrorResponse(w, err)
 			return
 		}

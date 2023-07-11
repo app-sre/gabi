@@ -365,7 +365,7 @@ func TestQuery(t *testing.T) {
 			},
 			400,
 			``,
-			`Unable to process database query: test`,
+			`Unable to process database rows: test`,
 		},
 		{
 			"valid query with database connection error",
