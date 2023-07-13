@@ -4,7 +4,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-export PATH="/opt/go/1.19.5/bin:${PATH}"
+export PATH="/opt/go/1.19.11/bin:${PATH}"
 
 BASE_IMAGE="gabi"
 QUAY_IMAGE="quay.io/app-sre/${BASE_IMAGE}"
