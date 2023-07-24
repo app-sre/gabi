@@ -68,8 +68,7 @@ objects:
           - --provider=openshift
           - --openshift-service-account=${GABI_INSTANCE}
           - --upstream=http://localhost:8080
-          # Reserved for future use.
-          # - --upstream-timeout=${OAUTH_PROXY_UPSTREAM_TIMEOUT}
+          - --upstream-timeout=${OAUTH_PROXY_UPSTREAM_TIMEOUT}
           - '--openshift-delegate-urls={"/": {"resource": "namespaces", "verb": "get", "name": "${NAMESPACE}", "namespace": "${NAMESPACE}"}}'
           - --tls-cert=/etc/tls/private/tls.crt
           - --tls-key=/etc/tls/private/tls.key
