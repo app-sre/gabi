@@ -8,7 +8,7 @@ objects:
   metadata:
     name: ${GABI_INSTANCE}
     annotations:
-      serviceaccounts.openshift.io/oauth-redirectreference.prometheus: '{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"${GABI_INSTANCE}"}}'
+      serviceaccounts.openshift.io/oauth-redirectreference.gabi: '{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"${GABI_INSTANCE}"}}'
 - apiVersion: apps/v1
   kind: Deployment
   metadata:
