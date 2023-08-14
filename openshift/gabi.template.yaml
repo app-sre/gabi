@@ -250,7 +250,7 @@ parameters:
 - name: OAUTH_PROXY_IMAGE_TAG
   value: "4.14.0"
 - name: OAUTH_PROXY_UPSTREAM_TIMEOUT
-  value: "30s"
+  value: "300s"
 - name: DB_DRIVER
   value: pgx
 - name: DB_WRITE
