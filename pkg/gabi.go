@@ -18,9 +18,6 @@ const (
 	// The total time it takes to read the request from the client.
 	DefaultReadTimeout = 1 * time.Minute
 
-	// The total time it takes to send a response back to the client.
-	DefaultWriteTimeout = 5 * time.Minute
-
 	// The total time it takes to execute the request.
 	DefaultRequestTimeout = 2 * time.Minute
 )
