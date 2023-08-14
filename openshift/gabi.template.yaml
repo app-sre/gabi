@@ -212,8 +212,7 @@ objects:
     annotations:
       cert-manager.io/issuer-kind: ${{CERT_MANAGER_ISSUER_KIND}}
       cert-manager.io/issuer-name: ${{CERT_MANAGER_ISSUER_NAME}}
-      # https://access.redhat.com/documentation/en-us/red_hat_process_automation_manager/7.1/html/managing_and_monitoring_process_server/configuring-openshift-connection-timeout-proc
-      haproxy.router.openshift.io/timeout: ${SERVER_TIMEOUT}
+      haproxy.router.openshift.io/timeout: ${OPENSHIFT_ROUTER_TIMEOUT}
     name: ${GABI_INSTANCE}
   spec:
     host: ${HOST}
@@ -243,8 +242,8 @@ parameters:
   value: 128Mi
 - name: MEMORY_LIMIT
   value: 256Mi
-- name: SERVER_TIMEOUT
-  value: 30s
+- name: OPENSHIFT_ROUTER_TIMEOUT
+  value: "600s"
 - name: OAUTH_PROXY_IMAGE_NAME
   value: quay.io/openshift/origin-oauth-proxy
 - name: OAUTH_PROXY_IMAGE_TAG
