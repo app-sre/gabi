@@ -17,6 +17,7 @@ objects:
     name: ${GABI_INSTANCE}
     annotations:
       ignore-check.kube-linter.io/minimum-three-replicas: "GABI does not need 3 replicas"
+      ignore-check.kube-linter.io/unset-cpu-requirements: "no cpu limits"
   spec:
     replicas: ${{REPLICAS}}
     selector:
@@ -58,7 +59,6 @@ objects:
             successThreshold: 1
           resources:
             limits:
-              cpu: 20m
               memory: 64Mi
             requests:
               cpu: 10m
@@ -162,7 +162,6 @@ objects:
               cpu: ${CPU_REQUEST}
               memory: ${MEMORY_REQUEST}
             limits:
-              cpu: ${CPU_LIMIT}
               memory: ${MEMORY_LIMIT}
         volumes:
         - name: gabi-tls
@@ -236,8 +235,6 @@ parameters:
   value: "1"
 - name: CPU_REQUEST
   value: 100m
-- name: CPU_LIMIT
-  value: 200m
 - name: MEMORY_REQUEST
   value: 128Mi
 - name: MEMORY_LIMIT
