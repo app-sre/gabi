@@ -11,6 +11,7 @@ require (
 	github.com/jackc/pgx/v4 v4.18.1
 	github.com/justinas/alice v1.2.0
 	github.com/orlangure/gnomock v0.24.0
+	github.com/rs/cors v1.10.0
 	github.com/stretchr/testify v1.8.1
 	go.uber.org/zap v1.24.0
 )
