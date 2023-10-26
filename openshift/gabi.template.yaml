@@ -61,7 +61,7 @@ objects:
             limits:
               memory: 64Mi
             requests:
-              cpu: 10m
+              cpu: ${OAUTH_PROXY_CPU_REQUEST}
               memory: 20Mi
           args:
           - --https-address=:3000
@@ -247,6 +247,8 @@ parameters:
   value: "4.14.0"
 - name: OAUTH_PROXY_UPSTREAM_TIMEOUT
   value: "300s"
+- name: OAUTH_PROXY_CPU_REQUEST
+  value: 100m
 - name: DB_DRIVER
   value: pgx
 - name: DB_WRITE
