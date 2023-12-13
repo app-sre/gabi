@@ -59,6 +59,7 @@ objects:
             successThreshold: 1
           resources:
             limits:
+              cpu: ${OAUTH_PROXY_CPU_LIMIT}
               memory: 64Mi
             requests:
               cpu: ${OAUTH_PROXY_CPU_REQUEST}
@@ -162,6 +163,7 @@ objects:
               cpu: ${CPU_REQUEST}
               memory: ${MEMORY_REQUEST}
             limits:
+              cpu: ${CPU_LIMIT}
               memory: ${MEMORY_LIMIT}
         volumes:
         - name: gabi-tls
@@ -235,6 +237,8 @@ parameters:
   value: "1"
 - name: CPU_REQUEST
   value: 100m
+- name: CPU_LIMIT
+  value: 100m
 - name: MEMORY_REQUEST
   value: 128Mi
 - name: MEMORY_LIMIT
@@ -248,6 +252,8 @@ parameters:
 - name: OAUTH_PROXY_UPSTREAM_TIMEOUT
   value: "300s"
 - name: OAUTH_PROXY_CPU_REQUEST
+  value: 100m
+- name: OAUTH_PROXY_CPU_LIMIT
   value: 100m
 - name: DB_DRIVER
   value: pgx
