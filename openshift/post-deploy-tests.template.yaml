@@ -36,12 +36,7 @@ objects:
             env:
             - name: HOST
               value: ${GABI_INSTANCE}-internal.${NAMESPACE}.svc.cluster.local
-            resources:
-              requests:
-                memory: ${MEMORY_REQUESTS}
-                cpu: ${CPU_REQUESTS}
-              limits:
-                memory: ${MEMORY_LIMIT}
+            resources: "${{RESOURCES}}"
 parameters:
 - name: NAMESPACE
   value: gabi
@@ -54,9 +49,5 @@ parameters:
   required: true
 - name: SERVICE_ACCOUNT
   value: "gabi-post-deploy-tests"
-- name: MEMORY_REQUESTS
-  value: 128Mi
-- name: MEMORY_LIMIT
-  value: 128Mi
-- name: CPU_REQUESTS
-  value: 300m
+- name: RESOURCES
+  value: '{"requests": {"cpu": "300m", "memory": "128Mi"}, "limits": {"memory": "128Mi"}}'
