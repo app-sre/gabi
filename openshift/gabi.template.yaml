@@ -57,12 +57,7 @@ objects:
             failureThreshold: 3
             periodSeconds: 10
             successThreshold: 1
-          resources:
-            limits:
-              memory: 64Mi
-            requests:
-              cpu: ${OAUTH_PROXY_CPU_REQUEST}
-              memory: 20Mi
+          resources: "${{OAUTH_PROXY_RESOURCES}}"
           args:
           - --https-address=:3000
           - --provider=openshift
@@ -157,12 +152,7 @@ objects:
             value: ${CONFIG_FILE_PATH}
           - name: REQUEST_TIMEOUT
             value: ${REQUEST_TIMEOUT}
-          resources:
-            requests:
-              cpu: ${CPU_REQUEST}
-              memory: ${MEMORY_REQUEST}
-            limits:
-              memory: ${MEMORY_LIMIT}
+          resources: "${{RESOURCES}}"
         volumes:
         - name: gabi-tls
           secret:
@@ -233,12 +223,8 @@ parameters:
   value: latest
 - name: REPLICAS
   value: "1"
-- name: CPU_REQUEST
-  value: 100m
-- name: MEMORY_REQUEST
-  value: 128Mi
-- name: MEMORY_LIMIT
-  value: 256Mi
+- name: RESOURCES
+  value: '{"requests": {"memory": "128Mi", "cpu": "100m"}, "limits":{"memory": "256Mi"}}'
 - name: OPENSHIFT_ROUTER_TIMEOUT
   value: "600s"
 - name: OAUTH_PROXY_IMAGE_NAME
@@ -247,8 +233,8 @@ parameters:
   value: "4.14.0"
 - name: OAUTH_PROXY_UPSTREAM_TIMEOUT
   value: "300s"
-- name: OAUTH_PROXY_CPU_REQUEST
-  value: 100m
+- name: OAUTH_PROXY_RESOURCES
+  value: '{"requests": {"memory": "32Mi", "cpu": "100m"}, "limits":{"memory": "64Mi"}}'
 - name: DB_DRIVER
   value: pgx
 - name: DB_WRITE
