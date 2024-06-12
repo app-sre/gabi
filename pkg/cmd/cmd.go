@@ -40,7 +40,7 @@ func Run(logger *zap.SugaredLogger) error {
 	logger.Debugf("Authorized users: %v", usere.Users)
 
 	dbe := db.NewDBEnv()
-	err = dbe.Populate()
+	err = dbe.Populate("")
 	if err != nil {
 		return fmt.Errorf("unable to configure database: %w", err)
 	}
@@ -92,6 +92,8 @@ func Run(logger *zap.SugaredLogger) error {
 	r := mux.NewRouter()
 	r.Handle("/healthcheck", logHandler(healthLogOutput, handlers.Healthcheck(cfg))).Methods("GET")
 	r.Handle("/query", logHandler(defaultLogOutput, queryHandler)).Methods("POST")
+	r.Handle("/dbname", logHandler(defaultLogOutput, handlers.GetCurrentDBName(cfg))).Methods("GET")
+	r.Handle("/dbname/switch", logHandler(defaultLogOutput, handlers.SwitchDBName(cfg))).Methods("POST")
 
 	port := 8080
 	logger.Infof("HTTP server starting on port: %d", port)
