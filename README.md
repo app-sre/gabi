@@ -157,6 +157,19 @@ eyJ0aXRsZSI6ICJEZWVwIFdvcms6IFJ1bGVzIGZvciBGb2N1c2VkIFN1Y2Nlc3MgaW4gYSBEaXN0cmFj
 Note: almost every modern and well-behaved JSON parser would attempt to unescape quotes and handle reserved characters
 correctly.
 
+The database name can also be switched via HTTP requests. To change the database name dynamically, send a POST request to /dbname/switch with the new database name in the request body.
+
+```
+curl -X POST http://localhost:8080/dbname/switch -H "Content-Type: application/json" -d '{"db_name": "new_dbname"}'
+```
+
+To get the current database name, send a GET request to /dbname.
+
+```
+curl http://localhost:8080/dbname
+```
+
+
 ## Detailed Operation
 
 `TODO`
