@@ -15,7 +15,7 @@ GIT_HASH=$(git rev-parse --short=7 HEAD)
     podman login quay.io -u "${QUAY_USER}" -p "${QUAY_TOKEN}"
 }
 
-podman build -t "${QUAY_IMAGE}:check" -f Dockerfile .
+podman build -t "${QUAY_IMAGE}:latest" -f Dockerfile .
 
 podman tag "${QUAY_IMAGE}:latest" "${QUAY_IMAGE}:${GIT_HASH}" 
 
