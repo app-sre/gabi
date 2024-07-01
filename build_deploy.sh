@@ -17,7 +17,7 @@ GIT_HASH=$(git rev-parse --short=7 HEAD)
 
 podman build -t "${QUAY_IMAGE}:check" -f Dockerfile .
 
-podman tag "${IMAGE_NAME}:latest" "${IMAGE_NAME}:${GIT_HASH}" 
+podman tag "${QUAY_IMAGE}:latest" "${QUAY_IMAGE}:${GIT_HASH}" 
 
-podman push "${IMAGE_NAME}:latest" 
-podman push "${IMAGE_NAME}:${GIT_HASH}" 
+podman push "${QUAY_IMAGE}:latest" 
+podman push "${QUAY_IMAGE}:${GIT_HASH}" 
