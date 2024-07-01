@@ -16,6 +16,8 @@ EOF
 
 export QUAY_TOKEN
 
+export DOCKER_HOST=unix:///run/user/${UID}/podman/podman.sock
+
 grep -oE 'Test[A-Za-z0-9]{,}' test/integration_test.go | while read -r test; do
     echo "Running test: ${test}"
     go test -tags integration -count 1 -timeout 300s -run "^${test}$" ./test/...
