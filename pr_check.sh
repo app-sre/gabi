@@ -6,7 +6,7 @@ set -o pipefail
 
 export PATH="/opt/go/1.19.11/bin:${PATH}"
 
-readonly BASE_IMG="gabi"
+readonly QUAY_IMAGE="quay.io/app-sre/gabi"
 
 {
     set +x
@@ -20,4 +20,4 @@ podman tag quay.io/app-sre/gnomock-cleaner:latest docker.io/orlangure/gnomock-cl
 
 podman system service -t 0 & ./integration.sh
 
-BUILD_CMD="podman build" IMG="${BASE_IMG}:check" make docker-build
+podman build -t "${QUAY_IMAGE}:check" -f Dockerfile .

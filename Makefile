@@ -13,6 +13,3 @@ clean:
 
 test:
 	go test ./...
-
-docker-build:
-	$(BUILD_CMD) -t ${IMG} -f Dockerfile .
