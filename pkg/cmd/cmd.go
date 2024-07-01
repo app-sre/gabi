@@ -13,6 +13,7 @@ import (
 	gorillahandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
+	"github.com/rs/cors"
 	"go.uber.org/zap"
 
 	gabi "github.com/app-sre/gabi/pkg"
@@ -89,9 +90,19 @@ func Run(logger *zap.SugaredLogger) error {
 	)
 	queryHandler := queryChain.Then(handlers.Query(cfg))
 
+	cors := cors.New(cors.Options{
+		AllowedOrigins: []string{"*"},
+		AllowedMethods: []string{
+			http.MethodPost,
+			http.MethodGet,
+		},
+		AllowedHeaders: []string{"*"},
+	})
+	queryHandler = cors.Handler(queryHandler)
+
 	r := mux.NewRouter()
 	r.Handle("/healthcheck", logHandler(healthLogOutput, handlers.Healthcheck(cfg))).Methods("GET")
-	r.Handle("/query", logHandler(defaultLogOutput, queryHandler)).Methods("POST")
+	r.Handle("/query", logHandler(defaultLogOutput, queryHandler)).Methods("POST", "OPTIONS")
 
 	port := 8080
 	logger.Infof("HTTP server starting on port: %d", port)
