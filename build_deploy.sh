@@ -25,10 +25,10 @@ BUILD_CMD="podman build" IMG="${TARGET_IMAGE}" make docker-build
 {
     set +x
     skopeo copy --dest-creds "${QUAY_USER}:${QUAY_TOKEN}" \
-        "localhost/${TARGET_IMAGE}" \
+        "${TARGET_IMAGE}" \
         "docker://${QUAY_IMAGE}:latest"
 
     skopeo copy --dest-creds "${QUAY_USER}:${QUAY_TOKEN}" \
-        "localhost/${TARGET_IMAGE}" \
+        "${TARGET_IMAGE}" \
         "docker://${QUAY_IMAGE}:${GIT_HASH}"
 }
