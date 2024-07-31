@@ -5,15 +5,12 @@ import (
 	"net/http"
 
 	gabi "github.com/app-sre/gabi/pkg"
+	"github.com/app-sre/gabi/pkg/models"
 )
-
-type SwitchDBNameRequest struct {
-	DBName string `json:"db_name"`
-}
 
 func SwitchDBName(cfg *gabi.Config) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var req SwitchDBNameRequest
+		var req models.SwitchDBNameRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, "Invalid request payload", http.StatusBadRequest)
 			return
