@@ -23,7 +23,6 @@ import (
 )
 
 func TestQuery(t *testing.T) {
-	//t.Parallel()
 
 	cases := []struct {
 		description   string
@@ -551,7 +550,6 @@ func TestQuery(t *testing.T) {
 	for _, tc := range cases {
 		tc := tc
 		t.Run(tc.description, func(t *testing.T) {
-			//t.Parallel()
 
 			var body, output bytes.Buffer
 
