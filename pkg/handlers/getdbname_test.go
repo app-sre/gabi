@@ -3,10 +3,10 @@ package handlers
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/app-sre/gabi/internal/test"
@@ -16,53 +16,68 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGetCurrentDBName(t *testing.T) {
+func TestGetDBName(t *testing.T) {
 	cases := []struct {
-		description string
-		dbName      string
-		code        int
-		body        map[string]string
+		description    string
+		dbName         string
+		defaultDBName  string
+		expectedStatus int
+		expectedBody   string
+		want           string
 	}{
 		{
 			"returns current database name",
 			"test_db",
+			"test_db",
 			200,
-			map[string]string{"db_name": "test_db"},
+			`{"db_name":"test_db"}`,
+			"",
 		},
 		{
 			"returns empty database name",
 			"",
+			"",
 			200,
-			map[string]string{"db_name": ""},
+			`{"db_name":""}`,
+			"",
+		},
+		{
+			"returns warning when current db name is different from default",
+			"test_db",
+			"default_db",
+			200,
+			`{"db_name":"test_db","warnings":["Current database differs from the default"]}`,
+			"Current database differs from the default",
 		},
 	}
 
 	for _, tc := range cases {
 		tc := tc
 		t.Run(tc.description, func(t *testing.T) {
-			var body bytes.Buffer
+			var output bytes.Buffer
+
+			os.Setenv("DB_NAME", tc.defaultDBName)
+			defer os.Unsetenv("DB_NAME")
 
 			dbEnv := &db.Env{Name: tc.dbName}
 
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest(http.MethodGet, "/", &bytes.Buffer{})
 
-			logger := test.DummyLogger(io.Discard).Sugar()
+			logger := test.DummyLogger(&output).Sugar()
 
 			expected := &gabi.Config{DBEnv: dbEnv, Logger: logger}
-			GetCurrentDBName(expected).ServeHTTP(w, r.WithContext(context.TODO()))
+			GetDBName(expected).ServeHTTP(w, r.WithContext(context.TODO()))
 
 			actual := w.Result()
 			defer func() { _ = actual.Body.Close() }()
 
-			_, _ = io.Copy(&body, actual.Body)
-
-			var responseBody map[string]string
-			err := json.Unmarshal(body.Bytes(), &responseBody)
-
+			body, err := io.ReadAll(actual.Body)
 			require.NoError(t, err)
-			assert.Equal(t, tc.code, actual.StatusCode)
-			assert.Equal(t, tc.body, responseBody)
+
+			assert.Equal(t, tc.expectedStatus, actual.StatusCode)
+			assert.JSONEq(t, tc.expectedBody, string(body))
+			assert.Contains(t, output.String(), tc.want)
 		})
 	}
 }

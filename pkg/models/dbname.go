@@ -5,5 +5,6 @@ type SwitchDBNameRequest struct {
 }
 
 type DBNameResponse struct {
-	DBName string `json:"db_name"`
+	DBName   string   `json:"db_name"`
+	Warnings []string `json:"warnings,omitempty"`
 }
