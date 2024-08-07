@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -22,18 +23,20 @@ import (
 )
 
 func TestQuery(t *testing.T) {
-	t.Parallel()
+	//t.Parallel()
 
 	cases := []struct {
-		description string
-		database    func() (*sql.DB, sqlmock.Sqlmock)
-		mock        func(sqlmock.Sqlmock)
-		context     func() context.Context
-		parameters  func(*http.Request)
-		request     func() *bytes.Buffer
-		code        int
-		body        string
-		want        string
+		description   string
+		database      func() (*sql.DB, sqlmock.Sqlmock)
+		mock          func(sqlmock.Sqlmock)
+		context       func() context.Context
+		parameters    func(*http.Request)
+		request       func() *bytes.Buffer
+		defaultDBName string
+		dbName        string
+		code          int
+		body          string
+		want          string
 	}{
 		{
 			"valid query",
@@ -56,6 +59,8 @@ func TestQuery(t *testing.T) {
 			func() *bytes.Buffer {
 				return bytes.NewBufferString(`{"query": "select 1;"}`)
 			},
+			"default_db",
+			"default_db",
 			200,
 			`{"result":[["?column?"],["1"]],"error":""}`,
 			``,
@@ -82,6 +87,8 @@ func TestQuery(t *testing.T) {
 			func() *bytes.Buffer {
 				return bytes.NewBufferString(`{"query": "select 1;"}`)
 			},
+			"default_db",
+			"default_db",
 			200,
 			`{"result":[["?column?"],["2"]],"error":""}`,
 			``,
@@ -108,6 +115,8 @@ func TestQuery(t *testing.T) {
 			func() *bytes.Buffer {
 				return bytes.NewBufferString(`{"query": "select 1;"}`)
 			},
+			"default_db",
+			"default_db",
 			200,
 			`{"result":[["?column?"],["1"]],"error":""}`,
 			``,
@@ -135,6 +144,8 @@ func TestQuery(t *testing.T) {
 			func() *bytes.Buffer {
 				return bytes.NewBufferString(`{"query": "c2VsZWN0IDE7"}`)
 			},
+			"default_db",
+			"default_db",
 			200,
 			`{"result":[["?column?"],["1"]],"error":""}`,
 			``,
@@ -162,6 +173,8 @@ func TestQuery(t *testing.T) {
 			func() *bytes.Buffer {
 				return bytes.NewBufferString(`{"query": "select 1;"}`)
 			},
+			"default_db",
+			"default_db",
 			200,
 			`{"result":[["?column?"],["1"]],"error":""}`,
 			``,
@@ -189,6 +202,8 @@ func TestQuery(t *testing.T) {
 			func() *bytes.Buffer {
 				return bytes.NewBufferString(`{"query": "select 1;"}`)
 			},
+			"default_db",
+			"default_db",
 			200,
 			`{"result":[["?column?"],["MQ=="]],"error":""}`,
 			``,
@@ -216,6 +231,8 @@ func TestQuery(t *testing.T) {
 			func() *bytes.Buffer {
 				return bytes.NewBufferString(`{"query": "select 1;"}`)
 			},
+			"default_db",
+			"default_db",
 			200,
 			`{"result":[["?column?"],["1"]],"error":""}`,
 			``,
@@ -241,6 +258,8 @@ func TestQuery(t *testing.T) {
 			func() *bytes.Buffer {
 				return bytes.NewBufferString(`{"query": ""}`)
 			},
+			"default_db",
+			"default_db",
 			200,
 			`{"result":[null],"error":""}`,
 			``,
@@ -265,6 +284,8 @@ func TestQuery(t *testing.T) {
 			func() *bytes.Buffer {
 				return bytes.NewBufferString(`{"query":"select 1;"}`)
 			},
+			"default_db",
+			"default_db",
 			400,
 			`{"result":null,"error":"test"}`,
 			``,
@@ -289,6 +310,8 @@ func TestQuery(t *testing.T) {
 			func() *bytes.Buffer {
 				return bytes.NewBufferString(`{"query":"select 1;"}`)
 			},
+			"default_db",
+			"default_db",
 			400,
 			``,
 			`Unable to query database: test`,
@@ -311,6 +334,8 @@ func TestQuery(t *testing.T) {
 			func() *bytes.Buffer {
 				return bytes.NewBufferString(`{"query":"select 1;"}`)
 			},
+			"default_db",
+			"default_db",
 			400,
 			``,
 			`Unable to start database transaction: test`,
@@ -336,6 +361,8 @@ func TestQuery(t *testing.T) {
 			func() *bytes.Buffer {
 				return bytes.NewBufferString(`{"query": "select 1;"}`)
 			},
+			"default_db",
+			"default_db",
 			400,
 			``,
 			`Unable to commit database changes: test`,
@@ -363,6 +390,8 @@ func TestQuery(t *testing.T) {
 			func() *bytes.Buffer {
 				return bytes.NewBufferString(`{"query": "select * from test;"}`)
 			},
+			"default_db",
+			"default_db",
 			400,
 			``,
 			`Unable to process database rows: test`,
@@ -386,6 +415,8 @@ func TestQuery(t *testing.T) {
 			func() *bytes.Buffer {
 				return bytes.NewBufferString(`{"query": "select 1;"}`)
 			},
+			"default_db",
+			"default_db",
 			503,
 			`Unable to connect to the database`,
 			``,
@@ -408,6 +439,8 @@ func TestQuery(t *testing.T) {
 			func() *bytes.Buffer {
 				return &bytes.Buffer{}
 			},
+			"default_db",
+			"default_db",
 			400,
 			`Request body cannot be empty`,
 			``,
@@ -430,6 +463,8 @@ func TestQuery(t *testing.T) {
 			func() *bytes.Buffer {
 				return bytes.NewBufferString(`{"query: "select 1;"}`)
 			},
+			"default_db",
+			"default_db",
 			400,
 			``,
 			`Unable to decode request body`,
@@ -452,6 +487,8 @@ func TestQuery(t *testing.T) {
 			func() *bytes.Buffer {
 				return bytes.NewBufferString(`{"query": -1}`)
 			},
+			"default_db",
+			"default_db",
 			400,
 			``,
 			`Unable to decode request body`,
@@ -476,8 +513,37 @@ func TestQuery(t *testing.T) {
 			func() *bytes.Buffer {
 				return bytes.NewBufferString(`{"query": "dGhpcyBpcyBhIHRlc3Q=="}`)
 			},
+			"default_db",
+			"default_db",
 			400,
 			`Unable to decode Base64-encoded query`,
+			``,
+		},
+		{
+			"database name differs from the default",
+			func() (*sql.DB, sqlmock.Sqlmock) {
+				db, mock, _ := sqlmock.New()
+				return db, mock
+			},
+			func(mock sqlmock.Sqlmock) {
+				rows := sqlmock.NewRows([]string{"?column?"}).AddRow("1")
+				mock.ExpectBegin()
+				mock.ExpectQuery(`select 1;`).WillReturnRows(rows)
+				mock.ExpectCommit()
+			},
+			func() context.Context {
+				return context.TODO()
+			},
+			func(r *http.Request) {
+				// No-op.
+			},
+			func() *bytes.Buffer {
+				return bytes.NewBufferString(`{"query": "select 1;"}`)
+			},
+			"default_db",
+			"test_db",
+			200,
+			`{"result":[["?column?"],["1"]],"warnings":["Current database differs from the default"],"error":""}`,
 			``,
 		},
 	}
@@ -485,9 +551,14 @@ func TestQuery(t *testing.T) {
 	for _, tc := range cases {
 		tc := tc
 		t.Run(tc.description, func(t *testing.T) {
-			t.Parallel()
+			//t.Parallel()
 
 			var body, output bytes.Buffer
+
+			os.Setenv("DB_NAME", tc.defaultDBName)
+			defer os.Unsetenv("DB_NAME")
+
+			dbEnv := &gabidb.Env{Name: tc.dbName}
 
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest(http.MethodGet, "/", tc.request())
@@ -501,7 +572,7 @@ func TestQuery(t *testing.T) {
 			tc.mock(mock)
 			tc.parameters(r)
 
-			expected := &gabi.Config{DB: db, DBEnv: &gabidb.Env{}, Logger: logger, Encoder: encoder}
+			expected := &gabi.Config{DB: db, DBEnv: dbEnv, Logger: logger, Encoder: encoder}
 			Query(expected).ServeHTTP(w, r.WithContext(tc.context()))
 
 			actual := w.Result()

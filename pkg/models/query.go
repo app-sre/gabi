@@ -5,6 +5,7 @@ type QueryRequest struct {
 }
 
 type QueryResponse struct {
-	Result [][]string `json:"result"`
-	Error  string     `json:"error"`
+	Result   [][]string `json:"result"`
+	Warnings []string   `json:"warnings,omitempty"`
+	Error    string     `json:"error"`
 }
