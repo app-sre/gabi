@@ -14,6 +14,7 @@ import (
 	"github.com/app-sre/gabi/internal/test"
 	gabi "github.com/app-sre/gabi/pkg"
 	"github.com/app-sre/gabi/pkg/audit"
+	"github.com/app-sre/gabi/pkg/env/db"
 	"github.com/app-sre/gabi/pkg/env/splunk"
 	"github.com/stretchr/testify/assert"
 )
@@ -33,6 +34,7 @@ func TestAudit(t *testing.T) {
 		response    string
 		want        *regexp.Regexp
 		query       string
+		dbName      string
 	}{
 		{
 			"valid query",
@@ -67,6 +69,7 @@ func TestAudit(t *testing.T) {
 			`{"query":"select 1;","user":"test","namespace":"test","pod":"test"}`,
 			regexp.MustCompile(`AUDIT\s{"Query": "select 1;", "User": "test", "Timestamp": \d{10}}`),
 			`select 1;`,
+			"test_db",
 		},
 		{
 			"valid Base64-encoded query",
@@ -104,6 +107,7 @@ func TestAudit(t *testing.T) {
 			`{"query":"select 1;","user":"test","namespace":"test","pod":"test"}`,
 			regexp.MustCompile(`AUDIT\s{"Query": "select 1;", "User": "test", "Timestamp": \d{10}}`),
 			`select 1;`,
+			"test_db",
 		},
 		{
 			"valid query with user passed via context",
@@ -138,6 +142,7 @@ func TestAudit(t *testing.T) {
 			`{"query":"select 1;","user":"test2","namespace":"test","pod":"test"}`,
 			regexp.MustCompile(`AUDIT\s{"Query": "select 1;", "User": "test2", "Timestamp": \d{10}}`),
 			`select 1;`,
+			"test_db",
 		},
 		{
 			"valid query with empty HTTP query parameters provided",
@@ -175,6 +180,7 @@ func TestAudit(t *testing.T) {
 			`{"query":"select 1;","user":"test","namespace":"test","pod":"test"}`,
 			regexp.MustCompile(`AUDIT\s{"Query": "select 1;", "User": "test", "Timestamp": \d{10}}`),
 			`select 1;`,
+			"test_db",
 		},
 		{
 			"valid query with no SQL statements provided",
@@ -206,6 +212,7 @@ func TestAudit(t *testing.T) {
 			``,
 			regexp.MustCompile(`AUDIT\s{"Query": "", "User": "test", "Timestamp": \d{10}}`),
 			``,
+			"test_db",
 		},
 		{
 			"valid query with no Splunk endpoint configured",
@@ -234,6 +241,7 @@ func TestAudit(t *testing.T) {
 			``,
 			regexp.MustCompile(``),
 			``,
+			"test_db",
 		},
 		{
 			"valid query with invalid Splunk endpoint configured",
@@ -264,6 +272,7 @@ func TestAudit(t *testing.T) {
 			``,
 			regexp.MustCompile(``),
 			``,
+			"test_db",
 		},
 		{
 			"valid query with an error in Splunk response",
@@ -295,6 +304,7 @@ func TestAudit(t *testing.T) {
 			``,
 			regexp.MustCompile(``),
 			``,
+			"test_db",
 		},
 		{
 			"valid query with malformed JSON in Splunk response",
@@ -326,6 +336,7 @@ func TestAudit(t *testing.T) {
 			``,
 			regexp.MustCompile(``),
 			``,
+			"test_db",
 		},
 		{
 			"invalid query with empty body",
@@ -356,6 +367,7 @@ func TestAudit(t *testing.T) {
 			``,
 			regexp.MustCompile(`Unable to unmarshal request body`),
 			``,
+			"test_db",
 		},
 		{
 			"invalid query with malformed JSON in the body",
@@ -386,6 +398,7 @@ func TestAudit(t *testing.T) {
 			``,
 			regexp.MustCompile(`Unable to unmarshal request body`),
 			``,
+			"test_db",
 		},
 		{
 			"invalid query with no required headers set",
@@ -415,6 +428,7 @@ func TestAudit(t *testing.T) {
 			``,
 			regexp.MustCompile(``),
 			``,
+			"test_db",
 		},
 		{
 			"invalid query with no required user header set",
@@ -444,6 +458,7 @@ func TestAudit(t *testing.T) {
 			``,
 			regexp.MustCompile(``),
 			``,
+			"test_db",
 		},
 		{
 			"invalid query with malformed Base64-encoded value in the body",
@@ -481,6 +496,7 @@ func TestAudit(t *testing.T) {
 			``,
 			regexp.MustCompile(``),
 			``,
+			"test_db",
 		},
 	}
 
@@ -494,6 +510,8 @@ func TestAudit(t *testing.T) {
 				output         bytes.Buffer
 				query          string
 			)
+
+			dbEnv := &db.Env{Name: tc.dbName}
 
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest(http.MethodGet, "/", tc.request())
@@ -510,7 +528,7 @@ func TestAudit(t *testing.T) {
 
 			tc.headers(tc.request())(r)
 
-			expected := &gabi.Config{LoggerAudit: la, SplunkAudit: sa, Logger: logger, Encoder: encoder}
+			expected := &gabi.Config{LoggerAudit: la, SplunkAudit: sa, Logger: logger, Encoder: encoder, DBEnv: dbEnv}
 			Audit(expected)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				query, _ = r.Context().Value(ContextKeyQuery).(string)
 			})).ServeHTTP(w, r.WithContext(tc.context()))

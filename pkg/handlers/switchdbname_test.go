@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/app-sre/gabi/internal/test"
 	gabi "github.com/app-sre/gabi/pkg"
 	"github.com/app-sre/gabi/pkg/env/db"
@@ -17,12 +19,15 @@ import (
 )
 
 func TestSwitchDBName(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		description   string
 		initialDBName string
 		newDBName     string
 		code          int
 		body          map[string]string
+		given         func(sqlmock.Sqlmock)
 	}{
 		{
 			"override database name",
@@ -30,6 +35,9 @@ func TestSwitchDBName(t *testing.T) {
 			"new_db",
 			200,
 			map[string]string{"db_name": "new_db"},
+			func(mock sqlmock.Sqlmock) {
+				mock.ExpectPing()
+			},
 		},
 		{
 			"empty database name",
@@ -37,6 +45,9 @@ func TestSwitchDBName(t *testing.T) {
 			"",
 			200,
 			map[string]string{"db_name": ""},
+			func(mock sqlmock.Sqlmock) {
+				mock.ExpectPing()
+			},
 		},
 		{
 			"invalid request payload",
@@ -44,15 +55,31 @@ func TestSwitchDBName(t *testing.T) {
 			"",
 			400,
 			map[string]string{"error": "Invalid request payload"},
+			nil,
+		},
+		{
+			"ping new database fails",
+			"initial_db",
+			"new_db",
+			200,
+			map[string]string{"db_name": "initial_db"},
+			func(mock sqlmock.Sqlmock) {
+				mock.ExpectPing().WillReturnError(errors.New("ping failed"))
+			},
 		},
 	}
 
 	for _, tc := range cases {
 		tc := tc
 		t.Run(tc.description, func(t *testing.T) {
+			t.Parallel()
+
 			var body bytes.Buffer
 
 			dbEnv := &db.Env{Name: tc.initialDBName}
+
+			db, mock, _ := sqlmock.New(sqlmock.MonitorPingsOption(true))
+			defer func() { _ = db.Close() }()
 
 			w := httptest.NewRecorder()
 			var requestBody []byte
@@ -65,7 +92,12 @@ func TestSwitchDBName(t *testing.T) {
 
 			logger := test.DummyLogger(io.Discard).Sugar()
 
-			expected := &gabi.Config{DBEnv: dbEnv, Logger: logger}
+			expected := &gabi.Config{DBEnv: dbEnv, DB: db, Logger: logger}
+
+			if tc.given != nil {
+				tc.given(mock)
+			}
+
 			SwitchDBName(expected).ServeHTTP(w, r.WithContext(context.TODO()))
 
 			actual := w.Result()
@@ -84,8 +116,14 @@ func TestSwitchDBName(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, tc.code, actual.StatusCode)
 				assert.Equal(t, tc.body, responseBody)
-				assert.Equal(t, tc.newDBName, dbEnv.GetCurrentDBName())
+				if tc.description == "ping new database fails" {
+					assert.Equal(t, tc.initialDBName, dbEnv.GetCurrentDBName())
+				} else {
+					assert.Equal(t, tc.newDBName, dbEnv.GetCurrentDBName())
+				}
 			}
+
+			require.NoError(t, mock.ExpectationsWereMet())
 		})
 	}
 }
