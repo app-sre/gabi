@@ -1,0 +1,50 @@
+environment: development
+namespace: gabi
+
+openshift_router_timeout: 600s
+
+gabi:
+  instance: gabi-instance
+  image: quay.io/app-sre/gabi
+  tag: latest
+  replicas: 1
+  pod_name: gabi-staging
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+    limits:
+      memory: 256Mi
+  db_driver: pgx
+  db_write: false
+  host: example.com
+  aws_rds_secret_name: db-creds
+  request_timeout: 30s
+  config_file_path: /config/config.json
+
+oauth_proxy:
+  image: quay.io/openshift/origin-oauth-proxy
+  tag: 4.10.0
+  upstream_timeout: 300s
+  resources:
+    requests:
+      memory: 32Mi
+      cpu: 100m
+    limits:
+      memory: 64Mi
+
+splunk:
+  index: app-sre
+  secret_name: splunk-creds
+  # endpoint: REQUIRED
+  # token: REQUIRED
+
+cluster_scope_rbac:
+  create: true
+
+# Options for the cert-manager annotations
+cert_manager:
+  enable: false
+  issuer:
+    kind: ClusterIssuer
+    name: letsencrypt-prod-http

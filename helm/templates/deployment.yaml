@@ -1,0 +1,152 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: {{.Values.gabi.instance}}
+  name: {{.Values.gabi.instance}}
+  annotations:
+    ignore-check.kube-linter.io/minimum-three-replicas: "GABI does not need 3 replicas"
+    ignore-check.kube-linter.io/unset-cpu-requirements: "no cpu limits"
+spec:
+  replicas: {{.Values.gabi.replicas}}
+  selector:
+    matchLabels:
+      app: {{.Values.gabi.instance}}
+  template:
+    metadata:
+      labels:
+        app: {{.Values.gabi.instance}}
+    spec:
+      serviceAccountName: {{.Values.gabi.instance}}
+      containers:
+      - name: oauth-proxy
+        image: "{{.Values.oauth_proxy.image}}:{{.Values.oauth_proxy.tag}}"
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3000
+          name: http
+          protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /oauth/healthz
+            port: http
+            scheme: HTTPS
+          initialDelaySeconds: 5
+          timeoutSeconds: 1
+          failureThreshold: 3
+          periodSeconds: 10
+          successThreshold: 1
+        livenessProbe:
+          httpGet:
+            path: /oauth/healthz
+            port: http
+            scheme: HTTPS
+          initialDelaySeconds: 5
+          timeoutSeconds: 1
+          failureThreshold: 3
+          periodSeconds: 10
+          successThreshold: 1
+        resources: {{.Values.oauth_proxy.resources | toYaml | nindent 10}}
+        args:
+        - --https-address=:3000
+        - --provider=openshift
+        - --openshift-service-account={{.Values.gabi.instance}}
+        - --upstream=http://localhost:8080
+        - --upstream-timeout={{.Values.oauth_proxy.upstream_timeout}}
+        - '--openshift-delegate-urls={"/": {"resource": "namespaces", "verb": "get", "name": "{{.Values.namespace}}", "namespace": "{{.Values.namespace}}"}}'
+        - --tls-cert=/etc/tls/private/tls.crt
+        - --tls-key=/etc/tls/private/tls.key
+        - --cookie-secret-file=/var/run/secrets/kubernetes.io/serviceaccount/token
+        volumeMounts:
+        - mountPath: /etc/tls/private
+          name: gabi-tls
+      - name: {{.Values.gabi.instance}}
+        image: "{{.Values.gabi.image}}:{{.Values.gabi.tag}}"
+        readinessProbe:
+          httpGet:
+            path: /healthcheck
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 5
+          timeoutSeconds: 1
+          failureThreshold: 3
+          periodSeconds: 10
+          successThreshold: 1
+        livenessProbe:
+          httpGet:
+            path: /healthcheck
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 5
+          timeoutSeconds: 1
+          failureThreshold: 3
+          periodSeconds: 10
+          successThreshold: 1
+        volumeMounts:
+        - name: gabi-config
+          mountPath: /config
+        env:
+        - name: HOST
+          value: {{.Values.gabi.host}}
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: ENVIRONMENT
+          value: {{.Values.environment}}
+        - name: NAMESPACE
+          value: {{.Values.namespace}}
+        - name: SPLUNK_INDEX
+          value: {{.Values.splunk.index}}
+        - name: SPLUNK_TOKEN
+          valueFrom:
+            secretKeyRef:
+              key: SPLUNK_TOKEN
+              name: "{{.Values.gabi.instance}}-splunk"
+        - name: SPLUNK_ENDPOINT
+          valueFrom:
+            secretKeyRef:
+              key: SPLUNK_ENDPOINT
+              name: "{{.Values.gabi.instance}}-splunk"
+        - name: DB_DRIVER
+          value: {{.Values.gabi.db_driver}}
+        - name: DB_WRITE
+          value: "{{.Values.gabi.db_write}}"
+        - name: DB_HOST
+          valueFrom:
+            secretKeyRef:
+              key: db.host
+              name: {{.Values.gabi.aws_rds_secret_name}}
+        - name: DB_PORT
+          valueFrom:
+            secretKeyRef:
+              key: db.port
+              name: {{.Values.gabi.aws_rds_secret_name}}
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              key: db.user
+              name: {{.Values.gabi.aws_rds_secret_name}}
+        - name: DB_PASS
+          valueFrom:
+            secretKeyRef:
+              key: db.password
+              name: {{.Values.gabi.aws_rds_secret_name}}
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              key: db.name
+              name: {{.Values.gabi.aws_rds_secret_name}}
+        - name: CONFIG_FILE_PATH
+          value: {{.Values.gabi.config_file_path}}
+        - name: REQUEST_TIMEOUT
+          value: {{.Values.gabi.request_timeout}}
+        resources: {{.Values.gabi.resources | toYaml | nindent 10}}
+      volumes:
+      - name: "{{.Values.gabi.instance}}-tls"
+        secret:
+          secretName: "{{.Values.gabi.instance}}-tls"
+      - name: gabi-config
+        configMap:
+          optional: true
+          name: {{.Values.gabi.instance}}

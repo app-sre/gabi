@@ -1,0 +1,21 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{.Values.gabi.instance}}
+  annotations:
+    {{- if .Values.cert_manager.enable}}
+    cert-manager.io/issuer-kind: {{.Values.cert_manager.issuer.kind}}
+    cert-manager.io/issuer-name: {{.Values.cert_manager.issuer.name}}
+    {{- end}}
+    haproxy.router.openshift.io/timeout: {{.Values.openshift_router_timeout}}
+spec:
+  host: {{.Values.gabi.host }}
+  port:
+    targetPort: http
+  to:
+    kind: Service
+    name: {{.Values.gabi.instance}}-external
+    weight: 100
+  tls:
+    termination: Reencrypt
+    insecureEdgeTerminationPolicy: Redirect
