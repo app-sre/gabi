@@ -33,11 +33,15 @@ oauth_proxy:
     limits:
       memory: 64Mi
 
+
+# Endpoint and token are passed
+# as secretParameters. SecretParamaeter don't allow yaml
+# splunk_endpoint: REQUIRED
+# splunk_token:  REQUIRED
+
 splunk:
   index: app-sre
   secret_name: splunk-creds
-  # endpoint: REQUIRED
-  # token: REQUIRED
 
 cluster_scope_rbac:
   create: true
