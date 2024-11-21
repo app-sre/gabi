@@ -186,7 +186,7 @@ objects:
   metadata:
     name: ${GABI_INSTANCE}-external
     annotations:
-      service.alpha.openshift.io/serving-cert-secret-name: ${GABI_INSTANCE}-tls
+      service.alpha.openshift.io/serving-cert-secret-name: ${GABI_INSTANCE}-svc-tls
   spec:
     ports:
     - name: http
