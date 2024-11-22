@@ -198,10 +198,7 @@ objects:
 - apiVersion: route.openshift.io/v1
   kind: Route
   metadata:
-    annotations:
-      cert-manager.io/issuer-kind: ${{CERT_MANAGER_ISSUER_KIND}}
-      cert-manager.io/issuer-name: ${{CERT_MANAGER_ISSUER_NAME}}
-      haproxy.router.openshift.io/timeout: ${OPENSHIFT_ROUTER_TIMEOUT}
+    annotations: "${{ROUTE_ANNOTATIONS}}"
     name: ${GABI_INSTANCE}
   spec:
     host: ${HOST}
@@ -225,8 +222,6 @@ parameters:
   value: "1"
 - name: RESOURCES
   value: '{"requests": {"memory": "128Mi", "cpu": "100m"}, "limits":{"memory": "256Mi"}}'
-- name: OPENSHIFT_ROUTER_TIMEOUT
-  value: "600s"
 - name: OAUTH_PROXY_IMAGE_NAME
   value: quay.io/openshift/origin-oauth-proxy
 - name: OAUTH_PROXY_IMAGE_TAG
@@ -257,7 +252,5 @@ parameters:
   value: "30s"
 - name: GABI_INSTANCE
   value: gabi-instance
-- name: CERT_MANAGER_ISSUER_KIND
-  value: ClusterIssuer
-- name: CERT_MANAGER_ISSUER_NAME
-  value: letsencrypt-prod-http
+- name: ROUTE_ANNOTATIONS
+  value: '{"haproxy.router.openshift.io/timeout": "600s"}'
