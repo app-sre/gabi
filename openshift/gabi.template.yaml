@@ -156,7 +156,7 @@ objects:
         volumes:
         - name: gabi-tls
           secret:
-            secretName: ${GABI_INSTANCE}-tls
+            secretName: ${GABI_INSTANCE}-svc-tls
         - name: gabi-config
           configMap:
             optional: true
