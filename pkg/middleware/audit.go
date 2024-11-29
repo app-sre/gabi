@@ -84,6 +84,7 @@ func Audit(cfg *gabi.Config) Middleware {
 				Query:     request.Query,
 				User:      user,
 				Timestamp: now.Unix(),
+				DBName:    cfg.DBEnv.GetCurrentDBName(),
 			}
 			_ = cfg.LoggerAudit.Write(ctx, query)
 

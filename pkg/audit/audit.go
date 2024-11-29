@@ -8,6 +8,7 @@ type QueryData struct {
 	Namespace string
 	Pod       string
 	Timestamp int64
+	DBName    string
 }
 
 type Audit interface {

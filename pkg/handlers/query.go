@@ -29,7 +29,16 @@ func Query(cfg *gabi.Config) http.HandlerFunc {
 		var (
 			base64Mode byte
 			request    models.QueryRequest
+			warnings   []string
 		)
+
+		defaultDBName := os.Getenv("DB_NAME")
+		currentDBName := cfg.DBEnv.GetCurrentDBName()
+		if currentDBName != defaultDBName {
+			l := "Current database differs from the default"
+			cfg.Logger.Warnf(l)
+			warnings = append(warnings, l)
+		}
 
 		if s := r.URL.Query().Get("base64_results"); s != "" {
 			if ok, err := strconv.ParseBool(s); err == nil && ok {
@@ -159,7 +168,8 @@ func Query(cfg *gabi.Config) http.HandlerFunc {
 		w.Header().Set("Cache-Control", "private, no-store")
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		_ = json.NewEncoder(w).Encode(&models.QueryResponse{
-			Result: result,
+			Result:   result,
+			Warnings: warnings,
 		})
 	}
 }
