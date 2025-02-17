@@ -40,17 +40,16 @@ func Run(logger *zap.SugaredLogger) error {
 	logger.Debugf("Authorized users: %v", usere.Users)
 
 	dbe := db.NewDBEnv()
-	err = dbe.Populate("")
+	err = dbe.Populate()
 	if err != nil {
 		return fmt.Errorf("unable to configure database: %w", err)
 	}
 	logger.Infof("Using database driver: %s (write access: %t)", dbe.Driver, dbe.AllowWrite)
 
-	db, err := sql.Open(dbe.Driver.String(), dbe.ConnectionDSN())
+	db, err := sql.Open(dbe.Driver.String(), dbe.ConnectionDSN(""))
 	if err != nil {
 		return fmt.Errorf("unable to open database connection: %w", err)
 	}
-	defer db.Close()
 	logger.Debugf("Connected to database host: %s (port: %d)", dbe.Host, dbe.Port)
 
 	se := splunk.NewSplunkEnv()
@@ -69,6 +68,7 @@ func Run(logger *zap.SugaredLogger) error {
 		Logger:      logger,
 		Encoder:     base64.StdEncoding,
 	}
+	defer cfg.DB.Close()
 	timeout := gabi.RequestTimeout()
 
 	// Temporary workaround for easy to access io.Writer.

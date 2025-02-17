@@ -29,12 +29,6 @@ func TestGetCurrentDBName(t *testing.T) {
 			200,
 			map[string]string{"db_name": "test_db"},
 		},
-		{
-			"returns empty database name",
-			"",
-			200,
-			map[string]string{"db_name": ""},
-		},
 	}
 
 	for _, tc := range cases {

@@ -8,7 +8,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"database/sql"
+	"errors"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/app-sre/gabi/internal/test"
 	gabi "github.com/app-sre/gabi/pkg"
 	"github.com/app-sre/gabi/pkg/env/db"
@@ -21,6 +24,7 @@ func TestSwitchDBName(t *testing.T) {
 		description   string
 		initialDBName string
 		newDBName     string
+		sqlOpener     func(string, string) (*sql.DB, error)
 		code          int
 		body          map[string]string
 	}{
@@ -28,20 +32,32 @@ func TestSwitchDBName(t *testing.T) {
 			"override database name",
 			"initial_db",
 			"new_db",
+			func(s string, s2 string) (db *sql.DB, err error) {
+				new_db, mock, _ := sqlmock.New(sqlmock.MonitorPingsOption(true))
+				mock.ExpectPing()
+				return new_db, nil
+            },
 			200,
 			map[string]string{"db_name": "new_db"},
 		},
 		{
-			"empty database name",
+			"invalid database name",
 			"initial_db",
-			"",
-			200,
-			map[string]string{"db_name": ""},
+			"invalid_db",
+			func(s string, s2 string) (db *sql.DB, err error) {
+				new_db, _, _ := sqlmock.New()				
+				return new_db, errors.New("connection refused")
+            },
+			400,
+			map[string]string{"error": "Unable to open database connection"},
 		},
 		{
 			"invalid request payload",
 			"initial_db",
 			"",
+			func(s string, s2 string) (db *sql.DB, err error) {
+				return nil, nil
+            },
 			400,
 			map[string]string{"error": "Invalid request payload"},
 		},
@@ -53,6 +69,7 @@ func TestSwitchDBName(t *testing.T) {
 			var body bytes.Buffer
 
 			dbEnv := &db.Env{Name: tc.initialDBName}
+			db, _, _ := sqlmock.New()
 
 			w := httptest.NewRecorder()
 			var requestBody []byte
@@ -65,7 +82,10 @@ func TestSwitchDBName(t *testing.T) {
 
 			logger := test.DummyLogger(io.Discard).Sugar()
 
-			expected := &gabi.Config{DBEnv: dbEnv, Logger: logger}
+			expected := &gabi.Config{DB: db, DBEnv: dbEnv, Logger: logger}
+			defer func() { _ = expected.DB.Close() }()
+
+			gabi.SQLOpen = tc.sqlOpener
 			SwitchDBName(expected).ServeHTTP(w, r.WithContext(context.TODO()))
 
 			actual := w.Result()
@@ -76,15 +96,15 @@ func TestSwitchDBName(t *testing.T) {
 			var responseBody map[string]string
 			err := json.Unmarshal(body.Bytes(), &responseBody)
 
-			if tc.description == "invalid request payload" {
-				require.Error(t, err)
-				assert.Equal(t, tc.code, actual.StatusCode)
-				assert.Contains(t, body.String(), tc.body["error"])
-			} else {
+			if tc.description == "override database name" {
 				require.NoError(t, err)
 				assert.Equal(t, tc.code, actual.StatusCode)
 				assert.Equal(t, tc.body, responseBody)
-				assert.Equal(t, tc.newDBName, dbEnv.GetCurrentDBName())
+				assert.Equal(t, tc.newDBName, expected.GetCurrentDBName())
+			} else {
+				require.Error(t, err)
+				assert.Equal(t, tc.code, actual.StatusCode)
+				assert.Contains(t, body.String(), tc.body["error"])
 			}
 		})
 	}

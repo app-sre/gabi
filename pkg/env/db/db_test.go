@@ -21,7 +21,6 @@ func TestPopulate(t *testing.T) {
 	cases := []struct {
 		description string
 		given       func()
-		dbname      string
 		expected    *Env
 		error       bool
 		want        string
@@ -37,7 +36,6 @@ func TestPopulate(t *testing.T) {
 				t.Setenv("DB_NAME", "test")
 				t.Setenv("DB_WRITE", "false")
 			},
-			"",
 			&Env{
 				Driver:     "pgx",
 				Host:       "test",
@@ -54,7 +52,6 @@ func TestPopulate(t *testing.T) {
 			"missing required environment variables",
 			func() {
 			},
-			"",
 			&Env{},
 			true,
 			`unable to access environment variable: DB_DRIVER`,
@@ -64,7 +61,6 @@ func TestPopulate(t *testing.T) {
 			func() {
 				t.Setenv("DB_DRIVER", "")
 			},
-			"",
 			&Env{},
 			true,
 			`unable to access environment variable: DB_DRIVER`,
@@ -74,7 +70,6 @@ func TestPopulate(t *testing.T) {
 			func() {
 				t.Setenv("DB_DRIVER", "pgx")
 			},
-			"",
 			&Env{Driver: "pgx"},
 			true,
 			`unable to access environment variable: DB_HOST`,
@@ -86,7 +81,6 @@ func TestPopulate(t *testing.T) {
 				t.Setenv("DB_HOST", "test")
 				t.Setenv("DB_PORT", "1234")
 			},
-			"",
 			&Env{Driver: "pgx", Host: "test", Port: 1234},
 			true,
 			`unable to access environment variable: DB_USER`,
@@ -99,7 +93,6 @@ func TestPopulate(t *testing.T) {
 				t.Setenv("DB_PORT", "1234")
 				t.Setenv("DB_USER", "test")
 			},
-			"",
 			&Env{Driver: "pgx", Host: "test", Port: 1234, Username: "test"},
 			true,
 			`unable to access environment variable: DB_PASS`,
@@ -113,7 +106,6 @@ func TestPopulate(t *testing.T) {
 				t.Setenv("DB_USER", "test")
 				t.Setenv("DB_PASS", "test123")
 			},
-			"",
 			&Env{Driver: "pgx", Host: "test", Port: 1234, Username: "test", Password: "test123"},
 			true,
 			`unable to access environment variable: DB_NAME`,
@@ -127,7 +119,6 @@ func TestPopulate(t *testing.T) {
 				t.Setenv("DB_PASS", "test123")
 				t.Setenv("DB_NAME", "test")
 			},
-			"",
 			&Env{
 				Driver:     "pgx",
 				Host:       "test",
@@ -149,7 +140,6 @@ func TestPopulate(t *testing.T) {
 				t.Setenv("DB_PASS", "test123")
 				t.Setenv("DB_NAME", "test")
 			},
-			"",
 			&Env{
 				Driver:     "postgres",
 				Host:       "test",
@@ -167,7 +157,6 @@ func TestPopulate(t *testing.T) {
 			func() {
 				t.Setenv("DB_DRIVER", "test")
 			},
-			"",
 			&Env{Driver: "test", Host: "", Port: 0, Username: "", Password: "", Name: "", AllowWrite: false},
 			true,
 			`unable to use driver type: test`,
@@ -182,7 +171,6 @@ func TestPopulate(t *testing.T) {
 				t.Setenv("DB_NAME", "test")
 				t.Setenv("DB_WRITE", "true")
 			},
-			"",
 			&Env{
 				Driver:     "pgx",
 				Host:       "test",
@@ -202,7 +190,6 @@ func TestPopulate(t *testing.T) {
 				t.Setenv("DB_HOST", "test")
 				t.Setenv("DB_PORT", "test")
 			},
-			"",
 			&Env{Driver: "pgx", Host: "test", Port: 5432, Username: "", Password: "", Name: "", AllowWrite: false},
 			true,
 			`unable to convert environment variable: DB_PORT`,
@@ -217,7 +204,6 @@ func TestPopulate(t *testing.T) {
 				t.Setenv("DB_NAME", "test")
 				t.Setenv("DB_WRITE", "-1")
 			},
-			"",
 			&Env{Driver: "pgx", Host: "test", Port: 5432, Username: "test", Password: "test123", Name: "test", AllowWrite: false},
 			true,
 			`unable to convert environment variable: DB_WRITE`,
@@ -234,7 +220,7 @@ func TestPopulate(t *testing.T) {
 			tc.given()
 
 			actual := &Env{}
-			err := actual.Populate(tc.dbname)
+			err := actual.Populate()
 
 			if tc.error {
 				require.Error(t, err)
@@ -252,7 +238,6 @@ func TestConnectionDSN(t *testing.T) {
 	cases := []struct {
 		description string
 		given       func()
-		dbname      string
 		want        string
 	}{
 		{
@@ -265,7 +250,6 @@ func TestConnectionDSN(t *testing.T) {
 				t.Setenv("DB_PASS", "test123")
 				t.Setenv("DB_NAME", "test")
 			},
-			"",
 			`postgres://test:test123@test:1234/test`,
 		},
 		{
@@ -278,7 +262,6 @@ func TestConnectionDSN(t *testing.T) {
 				t.Setenv("DB_PASS", "t#e%s$t&!123")
 				t.Setenv("DB_NAME", "test")
 			},
-			"",
 			`postgres://test:t%23e%25s$t&%21123@test:1234/test`,
 		},
 		{
@@ -291,7 +274,6 @@ func TestConnectionDSN(t *testing.T) {
 				t.Setenv("DB_PASS", "test123")
 				t.Setenv("DB_NAME", "test")
 			},
-			"",
 			`test:test123@tcp(test:1234)/test`,
 		},
 		{
@@ -304,7 +286,6 @@ func TestConnectionDSN(t *testing.T) {
 				t.Setenv("DB_PASS", "t#e%s$t&!123")
 				t.Setenv("DB_NAME", "test")
 			},
-			"",
 			`test:t#e%s$t&!123@tcp(test:1234)/test`,
 		},
 	}
@@ -319,11 +300,11 @@ func TestConnectionDSN(t *testing.T) {
 			tc.given()
 
 			expected := &Env{}
-			err := expected.Populate(tc.dbname)
+			err := expected.Populate()
 
 			require.NoError(t, err)
 
-			actual := expected.ConnectionDSN()
+			actual := expected.ConnectionDSN("")
 
 			assert.Equal(t, tc.want, actual)
 		})
