@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/app-sre/gabi/pkg/audit"
@@ -30,7 +31,12 @@ type Config struct {
 	SplunkAudit audit.Audit
 	Logger      *zap.SugaredLogger
 	Encoder     *base64.Encoding
+	sync.Mutex
 }
+
+var (
+	SQLOpen = sql.Open
+)
 
 func Production() bool {
 	return os.Getenv("ENVIRONMENT") == "production"
@@ -62,4 +68,29 @@ func parseDuration(duration string) (time.Duration, error) {
 	}
 
 	return t, nil
+}
+
+func (c *Config) OverrideDBName(dbName string) error {
+	c.Lock()
+	defer c.Unlock()
+	db, err := SQLOpen(c.DBEnv.Driver.String(), c.DBEnv.ConnectionDSN(dbName))
+	if err != nil {
+		return err
+	}
+	err = db.Ping()
+	if err != nil {
+		db.Close()
+		return err
+	}
+	c.Logger.Debugf("Connected to database host: %s (dbname: %s)", c.DBEnv.Host, dbName)
+	c.DB.Close()
+	c.DB = db
+	c.DBEnv.Name = dbName
+	return nil
+}
+
+func (c *Config) GetCurrentDBName() string {
+	c.Lock()
+	defer c.Unlock()
+	return c.DBEnv.Name
 }

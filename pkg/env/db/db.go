@@ -5,7 +5,6 @@ import (
 	"net/url"
 	"os"
 	"strconv"
-	"sync"
 
 	"github.com/app-sre/gabi/pkg/env"
 )
@@ -18,14 +17,13 @@ type Env struct {
 	Password   string
 	Name       string
 	AllowWrite bool
-	sync.Mutex
 }
 
 func NewDBEnv() *Env {
 	return &Env{}
 }
 
-func (d *Env) Populate(dbName string) error {
+func (d *Env) Populate() error {
 	driver := os.Getenv("DB_DRIVER")
 	if driver == "" {
 		return &env.Error{Name: "DB_DRIVER"}
@@ -64,15 +62,11 @@ func (d *Env) Populate(dbName string) error {
 	}
 	d.Password = password
 
-	if dbName != "" {
-		d.Name = dbName
-	} else {
-		name := os.Getenv("DB_NAME")
-		if name == "" {
-			return &env.Error{Name: "DB_NAME"}
-		}
-		d.Name = name
+	name := os.Getenv("DB_NAME")
+	if name == "" {
+		return &env.Error{Name: "DB_NAME"}
 	}
+	d.Name = name
 
 	d.AllowWrite = false
 	writeString := os.Getenv("DB_WRITE")
@@ -92,18 +86,10 @@ func (d *Env) Populate(dbName string) error {
 	return nil
 }
 
-func (d *Env) ConnectionDSN() string {
-	return fmt.Sprintf(d.Driver.Format(), d.Username, d.Password, d.Host, d.Port, d.Name)
-}
-
-func (d *Env) OverrideDBName(dbName string) {
-	d.Lock()
-	defer d.Unlock()
-	d.Name = dbName
-}
-
-func (d *Env) GetCurrentDBName() string {
-	d.Lock()
-	defer d.Unlock()
-	return d.Name
+func (d *Env) ConnectionDSN(dbName string) string {
+	if dbName != "" {
+		return fmt.Sprintf(d.Driver.Format(), d.Username, d.Password, d.Host, d.Port, dbName)
+	} else {
+		return fmt.Sprintf(d.Driver.Format(), d.Username, d.Password, d.Host, d.Port, d.Name)
+	}
 }

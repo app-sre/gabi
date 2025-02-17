@@ -10,7 +10,7 @@ import (
 
 func GetCurrentDBName(cfg *gabi.Config) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		dbName := cfg.DBEnv.GetCurrentDBName()
+		dbName := cfg.GetCurrentDBName()
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(models.DBNameResponse{DBName: dbName})
 	})

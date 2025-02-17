@@ -16,10 +16,15 @@ func SwitchDBName(cfg *gabi.Config) http.Handler {
 			return
 		}
 
-		cfg.DBEnv.OverrideDBName(req.DBName)
-
+		err := cfg.OverrideDBName(req.DBName)
+		if err != nil {
+			l := "Unable to open database connection"
+			cfg.Logger.Errorf("%s: %s", l, err)
+			http.Error(w, l, http.StatusBadRequest)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]string{"db_name": cfg.DBEnv.GetCurrentDBName()})
+		json.NewEncoder(w).Encode(map[string]string{"db_name": cfg.GetCurrentDBName()})
 	})
 }
