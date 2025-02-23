@@ -1,11 +1,13 @@
 module github.com/app-sre/gabi
 
-go 1.19
+go 1.21
+
+toolchain go1.22.9
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/etherlabsio/healthcheck/v2 v2.0.0
-	github.com/go-sql-driver/mysql v1.7.0
+	github.com/go-sql-driver/mysql v1.9.0
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
 	github.com/jackc/pgx/v4 v4.18.1
@@ -16,6 +18,7 @@ require (
 )
 
 require (
+	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
 	github.com/Microsoft/go-winio v0.5.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
