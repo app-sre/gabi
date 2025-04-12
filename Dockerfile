@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi9/go-toolset:1.22.9-1744194661@sha256:e4193e71ea9f2e2504f6b4ee93cadef0fe5d7b37bba57484f4d4229801a7c063 AS builder
+FROM registry.access.redhat.com/ubi9/go-toolset:9.5-1744294473@sha256:8a9e1465ae487fa2b4a94d2baa249a8d59fb3d7e6884a7b22c783f494f4cfb01 AS builder
 
 ENV GOGC=off
 ENV CGO_ENABLED=0
