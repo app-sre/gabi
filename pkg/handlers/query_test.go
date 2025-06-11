@@ -57,7 +57,7 @@ func TestQuery(t *testing.T) {
 				return bytes.NewBufferString(`{"query": "select 1;"}`)
 			},
 			200,
-			`{"result":[["?column?"],["1"]],"error":""}`,
+			"{\"result\":[[\"?column?\"]\n,[\"1\"]\n],\"error\":\"\"}",
 			``,
 		},
 		{
@@ -83,7 +83,7 @@ func TestQuery(t *testing.T) {
 				return bytes.NewBufferString(`{"query": "select 1;"}`)
 			},
 			200,
-			`{"result":[["?column?"],["2"]],"error":""}`,
+			"{\"result\":[[\"?column?\"]\n,[\"2\"]\n],\"error\":\"\"}",
 			``,
 		},
 		{
@@ -109,7 +109,7 @@ func TestQuery(t *testing.T) {
 				return bytes.NewBufferString(`{"query": "select 1;"}`)
 			},
 			200,
-			`{"result":[["?column?"],["1"]],"error":""}`,
+			"{\"result\":[[\"?column?\"]\n,[\"1\"]\n],\"error\":\"\"}",
 			``,
 		},
 		{
@@ -136,7 +136,7 @@ func TestQuery(t *testing.T) {
 				return bytes.NewBufferString(`{"query": "c2VsZWN0IDE7"}`)
 			},
 			200,
-			`{"result":[["?column?"],["1"]],"error":""}`,
+			"{\"result\":[[\"?column?\"]\n,[\"1\"]\n],\"error\":\"\"}",
 			``,
 		},
 		{
@@ -163,7 +163,7 @@ func TestQuery(t *testing.T) {
 				return bytes.NewBufferString(`{"query": "select 1;"}`)
 			},
 			200,
-			`{"result":[["?column?"],["1"]],"error":""}`,
+			"{\"result\":[[\"?column?\"]\n,[\"1\"]\n],\"error\":\"\"}",
 			``,
 		},
 		{
@@ -190,7 +190,7 @@ func TestQuery(t *testing.T) {
 				return bytes.NewBufferString(`{"query": "select 1;"}`)
 			},
 			200,
-			`{"result":[["?column?"],["MQ=="]],"error":""}`,
+			"{\"result\":[[\"?column?\"]\n,[\"MQ==\"]\n],\"error\":\"\"}",
 			``,
 		},
 		{
@@ -217,7 +217,7 @@ func TestQuery(t *testing.T) {
 				return bytes.NewBufferString(`{"query": "select 1;"}`)
 			},
 			200,
-			`{"result":[["?column?"],["1"]],"error":""}`,
+			"{\"result\":[[\"?column?\"]\n,[\"1\"]\n],\"error\":\"\"}",
 			``,
 		},
 		{
@@ -242,7 +242,7 @@ func TestQuery(t *testing.T) {
 				return bytes.NewBufferString(`{"query": ""}`)
 			},
 			200,
-			`{"result":[null],"error":""}`,
+			"{\"result\":[null\n],\"error\":\"\"}",
 			``,
 		},
 		{

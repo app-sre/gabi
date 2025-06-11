@@ -112,10 +112,11 @@ func Query(cfg *gabi.Config) http.HandlerFunc {
 		 * We don't use the QueryResponse object because that would require
 		 * us to read the entire record set into memory and then write it
 		 * out as one big chunk; this causes timeouts and OOMs on large
-		 * queries.  So we try to write
+		 * queries.  So we try to write this one record at a time.  The
+		 * Golang JSON encoder puts a newline after each record.
 		*/
-		// Write the result object and start the JSON array
-		_, err = w.Write([]byte("{\"result\": [\n"))
+		// Write the result object and start the JSON array.
+		_, err = w.Write([]byte("{\"result\":["))
 		if err != nil {
 			cfg.Logger.Errorf("Unable to write JSON array start: %s", err)
 			_ = queryErrorResponse(w, err)
@@ -137,7 +138,7 @@ func Query(cfg *gabi.Config) http.HandlerFunc {
 
 		for rows.Next() {
 			// Write comma separating rows (from header and each-other)
-			_, err = w.Write([]byte(",\n"))
+			_, err = w.Write([]byte(","))
 			if err != nil {
 				cfg.Logger.Errorf("Unable to write JSON row separator: %s", err)
 				_ = queryErrorResponse(w, err)
@@ -172,7 +173,7 @@ func Query(cfg *gabi.Config) http.HandlerFunc {
 			}
 
 			// Write the row
-			err = encoder.Encode(keys)
+			err = encoder.Encode(row)
 			if err != nil {
 				cfg.Logger.Errorf("Unable to encode JSON data row: %s", err)
 				_ = queryErrorResponse(w, err)
@@ -188,7 +189,7 @@ func Query(cfg *gabi.Config) http.HandlerFunc {
 		}
 
 		// End of array and QueryResponse object
-		_, err = w.Write([]byte("], \"error\": \"\"}\n"))
+		_, err = w.Write([]byte("],\"error\":\"\"}\n"))
 		if err != nil {
 			cfg.Logger.Errorf("Unable to write JSON array close: %s", err)
 			_ = queryErrorResponse(w, err)
@@ -198,6 +199,7 @@ func Query(cfg *gabi.Config) http.HandlerFunc {
 		err = tx.Commit()
 		if err != nil {
 			cfg.Logger.Errorf("Unable to commit database changes: %s", err)
+
 			_ = queryErrorResponse(w, err)
 			return
 		}
