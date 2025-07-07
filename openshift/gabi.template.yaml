@@ -225,7 +225,7 @@ parameters:
 - name: OAUTH_PROXY_IMAGE_NAME
   value: quay.io/openshift/origin-oauth-proxy
 - name: OAUTH_PROXY_IMAGE_TAG
-  value: "4.14.0"
+  value: "4.18.0"
 - name: OAUTH_PROXY_UPSTREAM_TIMEOUT
   value: "300s"
 - name: OAUTH_PROXY_RESOURCES
