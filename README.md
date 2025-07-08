@@ -169,6 +169,9 @@ To get the current database name, send a GET request to /dbname.
 curl http://localhost:8080/dbname
 ```
 
+### Related Projects
+
+https://github.com/app-sre/gabi-cli
 
 ## Detailed Operation
 
