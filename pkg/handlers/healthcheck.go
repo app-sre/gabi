@@ -29,5 +29,17 @@ func Healthcheck(cfg *gabi.Config) http.Handler {
 				},
 			),
 		),
+		healthcheck.WithChecker(
+			"expiration", healthcheck.CheckerFunc(
+				func(ctx context.Context) error {
+					if cfg.UserEnv != nil && cfg.UserEnv.IsExpired() {
+						l := "service instance has expired"
+						cfg.Logger.Errorf("%s", l)
+						return errors.New(l)
+					}
+					return nil
+				},
+			),
+		),
 	)
 }

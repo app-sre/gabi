@@ -7,12 +7,15 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/app-sre/gabi/internal/test"
 	gabi "github.com/app-sre/gabi/pkg"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/app-sre/gabi/pkg/env/user"
 )
 
 func TestHealthcheck(t *testing.T) {
@@ -23,6 +26,7 @@ func TestHealthcheck(t *testing.T) {
 		given       func(sqlmock.Sqlmock)
 		code        int
 		body        string
+		userEnv     *user.Env
 	}{
 		{
 			"database is accessible and returns ping reply",
@@ -31,6 +35,18 @@ func TestHealthcheck(t *testing.T) {
 			},
 			200,
 			`{"status":"OK"}`,
+			nil,
+		},
+		{
+			"database is accessible, returns ping reply and has valid expiry",
+			func(mock sqlmock.Sqlmock) {
+				mock.ExpectPing()
+			},
+			200,
+			`{"status":"OK"}`,
+			&user.Env{
+				Expiration: func() time.Time { tm := time.Now().Add(time.Hour); return tm }(),
+			},
 		},
 		{
 			"database is not accessible",
@@ -39,6 +55,18 @@ func TestHealthcheck(t *testing.T) {
 			},
 			503,
 			`{"database":"Unable to connect to the database"}`,
+			nil,
+		},
+		{
+			"service instance has expired",
+			func(mock sqlmock.Sqlmock) {
+				mock.ExpectPing()
+			},
+			503,
+			`service instance has expired`,
+			&user.Env{
+				Expiration: func() time.Time { tm := time.Now().Add(-time.Hour); return tm }(),
+			},
 		},
 	}
 
@@ -59,7 +87,7 @@ func TestHealthcheck(t *testing.T) {
 
 			tc.given(mock)
 
-			expected := &gabi.Config{DB: db, Logger: logger}
+			expected := &gabi.Config{DB: db, Logger: logger, UserEnv: tc.userEnv}
 			Healthcheck(expected).ServeHTTP(w, r)
 
 			actual := w.Result()
