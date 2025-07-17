@@ -26,3 +26,14 @@ $ curl -s http://localhost:8080/healthcheck
   }
 }
 ```
+
+### Service is unhealthy due to service expiry
+
+```
+{
+  "status": "Service Unavailable",
+  "errors": {
+    "expiration": "service instance has expired"
+  }
+}
+```
