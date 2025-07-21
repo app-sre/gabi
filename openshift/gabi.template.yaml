@@ -9,6 +9,8 @@ objects:
     name: ${GABI_INSTANCE}
     annotations:
       serviceaccounts.openshift.io/oauth-redirectreference.gabi: '{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"${GABI_INSTANCE}"}}'
+  imagePullSecrets:
+  - name: ${IMAGE_PULL_SECRET}
 - apiVersion: apps/v1
   kind: Deployment
   metadata:
@@ -254,3 +256,5 @@ parameters:
   value: gabi-instance
 - name: ROUTE_ANNOTATIONS
   value: '{"haproxy.router.openshift.io/timeout": "600s"}'
+- name: IMAGE_PULL_SECRET
+  value: ""
