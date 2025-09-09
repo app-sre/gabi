@@ -92,9 +92,8 @@ func startPostgres(t *testing.T) *gnomock.Container {
 	)
 
 	options := p.Options()
-	options = append(options, gnomock.WithRegistryAuth(os.Getenv("QUAY_TOKEN")))
 	options = append(options, gnomock.WithUseLocalImagesFirst())
-	psql, err := gnomock.StartCustom("quay.io/app-sre/postgres:12.5", p.Ports(),
+	psql, err := gnomock.StartCustom("registry.redhat.io/rhel8/postgresql-12", p.Ports(),
 		options...,
 	)
 	require.NoError(t, err)
