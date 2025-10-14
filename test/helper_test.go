@@ -5,7 +5,9 @@ package test
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -91,10 +93,26 @@ func startPostgres(t *testing.T) *gnomock.Container {
 		postgres.WithDatabase("mydb"),
 	)
 
-	options := p.Options()
-	options = append(options, gnomock.WithRegistryAuth(os.Getenv("QUAY_TOKEN")))
-	options = append(options, gnomock.WithUseLocalImagesFirst())
-	psql, err := gnomock.StartCustom("quay.io/app-sre/postgres:12.5", p.Ports(),
+	healthcheck := func(ctx context.Context, c *gnomock.Container) error {
+		connStr := fmt.Sprintf("host=%s port=%d user=gnomock password=gnomick dbname=mydb sslmode=disable",
+			c.Host, c.DefaultPort())
+		db, err := sql.Open("pgx", connStr)
+		if err != nil {
+			return err
+		}
+		defer db.Close()
+		return db.PingContext(ctx)
+	}
+
+	options := []gnomock.Option{
+		gnomock.WithUseLocalImagesFirst(),
+		gnomock.WithEnv("POSTGRESQL_USER=gnomock"),
+		gnomock.WithEnv("POSTGRESQL_PASSWORD=gnomick"),
+		gnomock.WithEnv("POSTGRESQL_DATABASE=mydb"),
+		gnomock.WithHealthCheck(healthcheck),
+	}
+
+	psql, err := gnomock.StartCustom("registry.redhat.io/rhel9/postgresql-16:9.6", p.Ports(),
 		options...,
 	)
 	require.NoError(t, err)
@@ -112,8 +130,11 @@ func startSplunk(t *testing.T, password string) *gnomock.Container {
 	)
 
 	options := s.Options()
-	options = append(options, gnomock.WithRegistryAuth(os.Getenv("QUAY_TOKEN")))
-	options = append(options, gnomock.WithUseLocalImagesFirst())
+	options = append(options,
+		gnomock.WithUseLocalImagesFirst(),
+		gnomock.WithEnv("SPLUNK_GENERAL_TERMS=--accept-sgt-current-at-splunk-com"),
+	)
+
 	splunk, err := gnomock.StartCustom("quay.io/app-sre/splunk:latest", s.Ports(),
 		options...,
 	)
