@@ -30,6 +30,8 @@ spec:
     value: Dockerfile
   - name: path-context
     value: .
+  - name: ephemeral-namespace-run-script
+    value: ephemeral_integration_test.sh
   pipelineRef:
     params:
     - name: url
