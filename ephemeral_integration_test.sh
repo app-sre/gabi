@@ -21,20 +21,29 @@ cat /tmp/my-pod.yaml
 
 oc apply -f /tmp/my-pod.yaml
 
+echo ""
 echo "Waiting for pod to be ready..."
 oc wait --for=condition=ready pod/my-test-app --timeout=300s
 
+echo ""
 echo "Getting pod information..."
-oc get pods my-test-app -o wide
+oc get pods my-test-app
 
-echo "Extracting pod IP..."
-POD_IP=$(oc get pod my-test-app -o jsonpath='{.status.podIP}')
-echo "Pod IP: ${POD_IP}"
+echo ""
+echo "Getting service information..."
+oc get service my-test-app-internal
 
+echo ""
+echo "Waiting a moment for DNS propagation..."
+sleep 3
+
+echo ""
 echo "Testing pod with curl..."
-curl --silent --show-error --fail "http://${POD_IP}:8080/healthcheck"
+curl --silent --show-error --fail "http://my-test-app-internal:8080/healthcheck"
 
+echo ""
 echo "Cleaning up..."
 oc delete pod/my-test-app
+oc delete service/my-test-app-internal
 
 exit 0
