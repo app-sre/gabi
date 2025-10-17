@@ -32,7 +32,7 @@ POD_IP=$(oc get pod my-test-app -o jsonpath='{.status.podIP}')
 echo "Pod IP: ${POD_IP}"
 
 echo "Testing pod with curl..."
-curl -v "http://${POD_IP}:8080/healthcheck"
+curl --silent --show-error --fail "http://${POD_IP}:8080/healthcheck"
 
 echo "Cleaning up..."
 oc delete pod/my-test-app
