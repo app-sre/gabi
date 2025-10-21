@@ -27,7 +27,7 @@ objects:
       image: ${IMAGE_URL}
       env:
       - name: DB_HOST
-        value: database
+        value: localhost
       - name: DB_PORT
         value: "5432"
       - name: DB_USER
