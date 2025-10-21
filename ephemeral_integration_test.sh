@@ -29,12 +29,26 @@ echo ""
 echo "Getting pod information..."
 oc get pods my-test-app
 
+has_error=false
 echo ""
 echo "Testing pod with curl..."
-oc exec my-test-app -c app -- curl --silent --show-error --fail "http://localhost:8080/healthcheck"
+
+echo "Testing healthcheck OK"
+healthcheck_response=$(oc exec my-test-app -c app -- curl --silent --show-error --fail "http://localhost:8080/healthcheck")
+echo "Healthcheck response: ${healthcheck_response}"
+
+if [[ "${healthcheck_response}" != "{\"status\":\"OK\"}" ]]; then
+    echo "Healthcheck failed"
+    has_error=true
+fi
 
 echo ""
 echo "Cleaning up..."
 oc delete pod/my-test-app
 
+if [[ "${has_error}" == "true" ]]; then
+    exit 1
+fi
+
+echo "Test passed"
 exit 0
