@@ -1,0 +1,124 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-pod
+  labels:
+    app: test-pod
+    env: pipeline-test
+spec:
+  selector:
+    app: test-pod
+  ports:
+  - name: postgres
+    protocol: TCP
+    port: 5432
+    targetPort: 5432
+  - name: splunk-hec
+    protocol: TCP
+    port: 8088
+    targetPort: 8088
+  - name: splunk-api
+    protocol: TCP
+    port: 8089
+    targetPort: 8089
+  clusterIP: None  # Headless service for direct pod access
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-pod
+  labels:
+    app: test-pod
+    env: pipeline-test
+spec:
+  restartPolicy: Never
+  containers:
+  - name: splunk
+    image: quay.io/app-sre/splunk:latest
+    imagePullPolicy: IfNotPresent
+    env:
+    - name: SPLUNK_GENERAL_TERMS
+      value: --accept-sgt-current-at-splunk-com
+    - name: SPLUNK_START_ARGS
+      value: --accept-license
+    - name: SPLUNK_PASSWORD
+      value: splunk/splunk
+    ports:
+    - containerPort: 8088
+      name: hec
+    - containerPort: 8089
+      name: api
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "500m"
+      limits:
+        memory: "2Gi"
+        cpu: "2000m"
+    lifecycle:
+      postStart:
+        exec:
+          command:
+          - /bin/bash
+          - -c
+          - |
+            # Wait for Splunk management API to be ready, then enable HEC
+            until curl -k -u admin:splunk/splunk https://localhost:8089/services/server/info -s > /dev/null 2>&1; do
+              sleep 5
+            done
+            # Enable HEC and disable SSL for simplicity
+            curl -k -u admin:splunk/splunk https://localhost:8089/servicesNS/nobody/splunk_httpinput/data/inputs/http/http \
+              -X POST -d "disabled=0" -d "enableSSL=0" -s > /dev/null 2>&1 || true
+    readinessProbe:
+      httpGet:
+        path: /services/collector/health/1.0
+        port: 8088
+        scheme: HTTP
+      initialDelaySeconds: 60
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 40
+    livenessProbe:
+      httpGet:
+        path: /services/collector/health/1.0
+        port: 8088
+        scheme: HTTP
+      initialDelaySeconds: 120
+      periodSeconds: 30
+      timeoutSeconds: 3
+      failureThreshold: 3
+  - name: database
+    image: registry.redhat.io/rhel9/postgresql-16:9.6
+    imagePullPolicy: IfNotPresent
+    env:
+    - name: POSTGRESQL_USER
+      value: gabi
+    - name: POSTGRESQL_PASSWORD
+      value: passwd
+    - name: POSTGRESQL_DATABASE
+      value: mydb
+    ports:
+    - containerPort: 5432
+      name: postgres
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "250m"
+      limits:
+        memory: "512Mi"
+        cpu: "1000m"
+    readinessProbe:
+      tcpSocket:
+        port: 5432
+      initialDelaySeconds: 15
+      periodSeconds: 5
+      timeoutSeconds: 2
+      failureThreshold: 10
+    livenessProbe:
+      tcpSocket:
+        port: 5432
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 2
+      failureThreshold: 3
