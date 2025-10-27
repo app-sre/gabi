@@ -87,6 +87,28 @@ func createSplunkIngestToken(t *testing.T, client http.Client, host, port, passw
 	return response.Entry[0].Content.Token
 }
 
+func deleteSplunkIngestToken(t *testing.T, client http.Client, host, port, password, tokenName string) {
+	splunkURL := fmt.Sprintf("https://%s:%s/servicesNS/admin/splunk_httpinput/data/inputs/http/%s", host, port, tokenName)
+
+	req, err := http.NewRequest(http.MethodDelete, splunkURL, nil)
+	if err != nil {
+		t.Logf("Failed to create delete request: %v", err)
+		return
+	}
+	req.SetBasicAuth("admin", password)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Logf("Failed to delete token: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Logf("Token deletion returned status: %d", resp.StatusCode)
+	}
+}
+
 func startPostgres(t *testing.T) *gnomock.Container {
 	p := postgres.Preset(
 		postgres.WithUser("gnomock", "gnomick"),
@@ -149,8 +171,8 @@ func setEnvironment(configFile, dbHost, dbPort, dbWrite, splunkToken, splunkEndp
 	os.Setenv("DB_DRIVER", "pgx")
 	os.Setenv("DB_HOST", dbHost)
 	os.Setenv("DB_PORT", dbPort)
-	os.Setenv("DB_USER", "gnomock")
-	os.Setenv("DB_PASS", "gnomick")
+	os.Setenv("DB_USER", "gabi")
+	os.Setenv("DB_PASS", "passwd")
 	os.Setenv("DB_NAME", "mydb")
 	os.Setenv("DB_WRITE", dbWrite)
 
