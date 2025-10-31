@@ -34,16 +34,10 @@ metadata:
 spec:
   restartPolicy: Never
   containers:
-  - name: splunk
-    image: quay.io/app-sre/splunk:latest
-    imagePullPolicy: IfNotPresent
-    env:
-    - name: SPLUNK_GENERAL_TERMS
-      value: --accept-sgt-current-at-splunk-com
-    - name: SPLUNK_START_ARGS
-      value: --accept-license
-    - name: SPLUNK_PASSWORD
-      value: splunk/splunk
+  - name: mock-splunk
+    image: localhost/gabi-integration-test:local
+    imagePullPolicy: Never
+    command: ["/usr/local/bin/mock-splunk"]
     ports:
     - containerPort: 8088
       name: hec
@@ -51,42 +45,28 @@ spec:
       name: api
     resources:
       requests:
-        memory: "512Mi"
-        cpu: "500m"
+        memory: "64Mi"
+        cpu: "50m"
       limits:
-        memory: "2Gi"
-        cpu: "2000m"
-    lifecycle:
-      postStart:
-        exec:
-          command:
-          - /bin/bash
-          - -c
-          - |
-            # Wait for Splunk management API to be ready, then enable HEC
-            until curl -k -u admin:splunk/splunk https://localhost:8089/services/server/info -s > /dev/null 2>&1; do
-              sleep 5
-            done
-            # Enable HEC and disable SSL for simplicity
-            curl -k -u admin:splunk/splunk https://localhost:8089/servicesNS/nobody/splunk_httpinput/data/inputs/http/http \
-              -X POST -d "disabled=0" -d "enableSSL=0" -s > /dev/null 2>&1 || true
+        memory: "128Mi"
+        cpu: "200m"
     readinessProbe:
       httpGet:
         path: /services/collector/health/1.0
         port: 8088
         scheme: HTTP
-      initialDelaySeconds: 60
-      periodSeconds: 10
-      timeoutSeconds: 3
-      failureThreshold: 40
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 2
+      failureThreshold: 3
     livenessProbe:
       httpGet:
         path: /services/collector/health/1.0
         port: 8088
         scheme: HTTP
-      initialDelaySeconds: 120
-      periodSeconds: 30
-      timeoutSeconds: 3
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 2
       failureThreshold: 3
   - name: database
     image: registry.redhat.io/rhel9/postgresql-16:9.6
