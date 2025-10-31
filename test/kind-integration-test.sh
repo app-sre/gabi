@@ -59,8 +59,6 @@ echo ""
 echo "Step 3: Pulling supporting service images..."
 echo "  - Pulling PostgreSQL image..."
 podman pull registry.redhat.io/rhel9/postgresql-16:9.6
-echo "  - Pulling Splunk image..."
-podman pull quay.io/app-sre/splunk:latest
 
 # Step 4: Load images into kind cluster
 echo ""
@@ -81,23 +79,21 @@ rm /tmp/gabi-test-image.tar
 
 echo "  - Loading PostgreSQL image..."
 kind load docker-image registry.redhat.io/rhel9/postgresql-16:9.6 --name "${CLUSTER_NAME}"
-echo "  - Loading Splunk image..."
-kind load docker-image quay.io/app-sre/splunk:latest --name "${CLUSTER_NAME}"
 
 # Verify the integration test image was loaded correctly
 echo ""
 echo "Verifying integration test image in cluster:"
 podman exec "${CLUSTER_NAME}-control-plane" crictl images | grep gabi || echo "Warning: gabi image not found!"
 
-# Step 5: Deploy supporting services (database and splunk)
+# Step 5: Deploy supporting services (database and mock-splunk)
 echo ""
-echo "Step 5: Deploying database and splunk..."
+echo "Step 5: Deploying database and mock-splunk..."
 kubectl apply -f test/test-pod.yml
 
 # Step 6: Wait for supporting services to be ready
 echo ""
 echo "Step 6: Waiting for services to be ready..."
-echo "This may take a few minutes for Splunk to fully initialize..."
+echo "Waiting for test-pod to be ready..."
 echo ""
 
 # Show progress while waiting
