@@ -2,6 +2,18 @@
 
 This document explains how the integration tests have been adapted to work with deployed services in a Kubernetes cluster.
 
+## Mock Splunk Server
+
+🚀 **NEW**: The integration tests now use a lightweight **mock Splunk server** written in Go instead of the full Splunk container!
+
+### Benefits
+- ⚡ **Faster startup**: ~5 seconds vs. 60+ seconds for real Splunk
+- 💾 **Lower resources**: 64MB RAM vs. 512MB-2GB for Splunk
+- ✅ **More reliable**: Predictable behavior without complex initialization
+- 🔧 **Simpler maintenance**: No license acceptance or configuration needed
+
+The mock server is built into the same container as the integration tests (`test/mock-splunk/`) and mimics all Splunk HEC and Management API endpoints required by the tests.
+
 ## Changes from Original Tests
 
 ### Before (gnomock-based)
@@ -47,7 +59,7 @@ make integration-test-kind
 ```
 
 The script will:
-1. Deploy PostgreSQL and Splunk in a test pod
+1. Deploy PostgreSQL and mock-splunk in a test pod
 2. Run your integration tests against those services
 3. Report results
 
@@ -98,13 +110,15 @@ If testing against a real Splunk deployment, you need to:
    export SPLUNK_TOKEN="your-actual-token"
    ```
 
-### For Mock/Testing
+### For Mock Splunk (Default)
 
-The tests use `test123` as a default token. If you're not testing Splunk functionality specifically, you can:
+The integration tests use a **lightweight mock Splunk server** by default. The mock server:
+- Accepts all HEC tokens (no token validation)
+- Provides token creation/deletion API endpoints
+- Returns proper success responses for all events
+- Starts in under 5 seconds
 
-1. **Skip Splunk-dependent tests** by using test filters
-2. **Use a mock Splunk** that accepts any token
-3. **Comment out** Splunk assertions temporarily
+No additional configuration needed - just run the tests!
 
 ### Tests That Require Splunk
 
@@ -123,9 +137,10 @@ The `test/test-pod.yml` deploys:
 
 ```yaml
 containers:
-- name: splunk
-  image: quay.io/app-sre/splunk:latest
-  # Note: Splunk needs time to start and configure HEC
+- name: mock-splunk
+  image: gabi-integration-test:local
+  command: ["/usr/local/bin/mock-splunk"]
+  # Lightweight mock Splunk server (64MB RAM, fast startup)
 
 - name: database
   image: registry.redhat.io/rhel9/postgresql-16:9.6
@@ -137,6 +152,16 @@ containers:
   - name: POSTGRESQL_DATABASE
     value: mydb
 ```
+
+### Mock Splunk Details
+
+The mock server provides:
+- **HEC endpoint** (port 8088): Accepts audit events
+- **Management API** (port 8089): Token creation/deletion
+- **Health checks**: Kubernetes readiness/liveness probes
+- **Full compatibility**: Works with all existing integration tests
+
+See `test/mock-splunk/README.md` for implementation details.
 
 ## Troubleshooting
 
@@ -214,8 +239,8 @@ kubectl wait --for=condition=ready pod/gabi-debug --timeout=60s
    # Test actual PostgreSQL connection
    kubectl exec -it gabi-debug -- sh -c "PGPASSWORD=passwd psql -h test-pod -U gabi -d mydb -c 'SELECT version();'"
 
-   # Test Splunk HEC endpoint
-   kubectl exec -it gabi-debug -- curl http://test-pod:8088/services/collector/health
+   # Test mock-splunk HEC endpoint
+   kubectl exec -it gabi-debug -- curl http://test-pod:8088/services/collector/health/1.0
    ```
 
 6. **Check database logs**:
@@ -247,7 +272,7 @@ spec:
   ports:
   - name: postgres
     port: 5432
-  - name: splunk-hec
+  - name: mock-splunk-hec
     port: 8088
 ---
 apiVersion: v1
@@ -259,21 +284,21 @@ metadata:
 # ...
 ```
 
-### Splunk tests failing
+### Mock-Splunk tests failing
 
 ```bash
-# Check Splunk is running
-kubectl logs test-pod -c splunk
+# Check mock-splunk is running
+kubectl logs test-pod -c mock-splunk
 
 # Verify HEC endpoint is accessible
-kubectl exec -it gabi-integration-test-runner -- curl http://test-pod:8088/services/collector/health
+kubectl exec -it gabi-debug -- curl http://test-pod:8088/services/collector/health/1.0
 ```
 
-**Common issue**: Splunk takes 2-3 minutes to fully start. Make sure to wait for the pod to be ready:
+The mock-splunk server starts almost instantly (unlike real Splunk which takes 2-3 minutes). If it's not working:
 
-```bash
-kubectl wait --for=condition=ready pod/test-pod --timeout=300s
-```
+1. Check the logs for startup errors
+2. Verify the container image includes the mock-splunk binary
+3. Ensure ports 8088 and 8089 are not blocked
 
 ### Tests timeout
 
