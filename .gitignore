@@ -14,6 +14,9 @@ __debug_*
 # Test binary, build with `go test -c`
 *.test
 
+# Mock server binary
+test/mock-splunk/mock-splunk
+
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
