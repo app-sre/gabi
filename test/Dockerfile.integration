@@ -25,6 +25,11 @@ RUN set -eux && \
 RUN set -eux && \
   go test -c -tags integration -o integration.test ./test
 
+# Build the mock-splunk server
+RUN set -eux && \
+  cd test/mock-splunk && \
+  go build -ldflags '-s -w' -o /tmp/mock-splunk .
+
 # Final image
 FROM registry.access.redhat.com/ubi9/ubi-minimal:9.5-1742914212@sha256:ac61c96b93894b9169221e87718733354dd3765dd4a62b275893c7ff0d876869
 
@@ -45,6 +50,7 @@ RUN microdnf install -y \
 # Copy the binaries from builder
 COPY --from=builder /build/gabi /usr/local/bin/gabi
 COPY --from=builder /build/integration.test /usr/local/bin/integration.test
+COPY --from=builder /tmp/mock-splunk /usr/local/bin/mock-splunk
 
 # Set working directory
 WORKDIR /test
