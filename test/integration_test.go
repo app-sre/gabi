@@ -532,7 +532,8 @@ func TestQueryWithSplunkWriteFailure(t *testing.T) {
 	client := dummyHTTPClient()
 
 	// Use deployed services instead of starting containers
-	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8088")
+	dbHost := getEnvOrDefault("DB_HOST", "localhost")
+	dbPort := getEnvOrDefault("DB_PORT", "5432")
 
 	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
 	defer os.Remove(configFile)
@@ -540,11 +541,11 @@ func TestQueryWithSplunkWriteFailure(t *testing.T) {
 	// Intentionally use invalid database connection to trigger failure scenario
 	setEnvironment(
 		configFile,
-		"test",
-		"1234",
+		dbHost,
+		dbPort,
 		"false",
 		"test",
-		splunkEndpoint,
+		"http://localhost:8088",
 	)
 	defer os.Clearenv()
 
