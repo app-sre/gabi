@@ -36,7 +36,7 @@ spec:
   containers:
   - name: mock-splunk
     image: ${MOCK_SPLUNK_IMAGE}
-    imagePullPolicy: Never
+    imagePullPolicy: IfNotPresent
     command: ["/usr/local/bin/mock-splunk"]
     ports:
     - containerPort: 8088
