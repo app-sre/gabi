@@ -35,7 +35,7 @@ spec:
   restartPolicy: Never
   containers:
   - name: mock-splunk
-    image: localhost/gabi-integration-test:local
+    image: ${MOCK_SPLUNK_IMAGE}
     imagePullPolicy: Never
     command: ["/usr/local/bin/mock-splunk"]
     ports:

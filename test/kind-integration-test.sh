@@ -88,7 +88,10 @@ podman exec "${CLUSTER_NAME}-control-plane" crictl images | grep gabi || echo "W
 # Step 5: Deploy supporting services (database and mock-splunk)
 echo ""
 echo "Step 5: Deploying database and mock-splunk..."
-kubectl apply -f test/test-pod.yml
+# Set the mock-splunk image to the locally built image
+export MOCK_SPLUNK_IMAGE="localhost/${IMAGE_NAME}"
+echo "Using mock-splunk image: ${MOCK_SPLUNK_IMAGE}"
+envsubst < test/test-pod.yml | kubectl apply -f -
 
 # Step 6: Wait for supporting services to be ready
 echo ""
@@ -291,7 +294,7 @@ echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo "Cleaning up..."
     kubectl delete pod/gabi-integration-test-runner --ignore-not-found=true
-    kubectl delete -f test/test-pod.yml --ignore-not-found=true
+    envsubst < test/test-pod.yml | kubectl delete -f - --ignore-not-found=true
     echo "Cleanup complete!"
 fi
 
