@@ -216,7 +216,7 @@ fi
 
 echo "Cleaning up..."
 oc delete pod/gabi-integration-test-runner --ignore-not-found=true
-envsubst < test/test-pod.yml | oc delete -f - --ignore-not-found=true
+oc delete pod/test-pod --ignore-not-found=true
 echo "Cleanup complete!"
 
 exit $EXIT_STATUS
