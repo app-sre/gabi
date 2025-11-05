@@ -294,7 +294,7 @@ echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo "Cleaning up..."
     kubectl delete pod/gabi-integration-test-runner --ignore-not-found=true
-    envsubst < test/test-pod.yml | kubectl delete -f - --ignore-not-found=true
+    kubectl delete pod/test-pod --ignore-not-found=true
     echo "Cleanup complete!"
 fi
 
