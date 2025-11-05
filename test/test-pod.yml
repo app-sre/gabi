@@ -35,7 +35,7 @@ spec:
   restartPolicy: Never
   containers:
   - name: mock-splunk
-    image: ${MOCK_SPLUNK_IMAGE}
+    image: {{MOCK_SPLUNK_IMAGE}}
     imagePullPolicy: IfNotPresent
     command: ["/usr/local/bin/mock-splunk"]
     ports:

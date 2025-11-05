@@ -18,9 +18,9 @@ echo ""
 echo "Step 1: Deploying database and mock-splunk..."
 
 # Set the mock-splunk image to the locally built image
-export MOCK_SPLUNK_IMAGE="${IMAGE_URL}"
+MOCK_SPLUNK_IMAGE="${IMAGE_URL}"
 echo "Using mock-splunk image: ${MOCK_SPLUNK_IMAGE}"
-envsubst < test/test-pod.yml | oc apply -f -
+sed "s|{{MOCK_SPLUNK_IMAGE}}|${MOCK_SPLUNK_IMAGE}|g" test/test-pod.yml | oc apply -f -
 
 # Step 2: Wait for supporting services to be ready
 echo ""
