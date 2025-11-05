@@ -114,7 +114,7 @@ spec:
     - name: HOST
       value: "test"
     - name: NAMESPACE
-      value: "${NAMESPACE}"
+      value: "test"
     - name: POD_NAME
       value: "gabi-integration-test-runner"
     # Test timeout
