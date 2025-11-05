@@ -52,7 +52,7 @@ fi
 echo ""
 echo "Step 2: Building integration test image..."
 cd "$(dirname "$0")/.."
-podman build -t "${IMAGE_NAME}" -f test/Dockerfile.integration .
+podman build -t "${IMAGE_NAME}" -f Dockerfile.integration .
 
 # Step 3: Pull supporting service images
 echo ""
