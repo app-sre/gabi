@@ -89,9 +89,9 @@ podman exec "${CLUSTER_NAME}-control-plane" crictl images | grep gabi || echo "W
 echo ""
 echo "Step 5: Deploying database and mock-splunk..."
 # Set the mock-splunk image to the locally built image
-export MOCK_SPLUNK_IMAGE="localhost/${IMAGE_NAME}"
+MOCK_SPLUNK_IMAGE="localhost/${IMAGE_NAME}"
 echo "Using mock-splunk image: ${MOCK_SPLUNK_IMAGE}"
-envsubst < test/test-pod.yml | kubectl apply -f -
+sed "s|{{MOCK_SPLUNK_IMAGE}}|${MOCK_SPLUNK_IMAGE}|g" test/test-pod.yml | kubectl apply -f -
 
 # Step 6: Wait for supporting services to be ready
 echo ""
