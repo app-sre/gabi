@@ -14,7 +14,7 @@ metadata:
     appstudio.openshift.io/application: gabi-main
     appstudio.openshift.io/component: gabi-main
     pipelines.appstudio.openshift.io/type: build
-  name: gabi-main-on-pull-request
+  name: gabi-integration-main-on-pull-request
   namespace: app-sre-tenant
 spec:
   params:
@@ -27,9 +27,11 @@ spec:
   - name: image-expires-after
     value: 5d
   - name: dockerfile
-    value: Dockerfile
+    value: Dockerfile.integration
   - name: path-context
     value: .
+  - name: ephemeral-namespace-run-script
+    value: test/ephemeral-integration-test.sh
   pipelineRef:
     params:
     - name: url
