@@ -205,3 +205,35 @@ DB_PASS=secret123
 DB_NAME=main
 DB_WRITE=false
 ```
+
+## Integration tests
+
+Integration tests are defined on `test/integration_test.go`. To run tests locally you will need a container runtime (docker or podman) and [kind](https://kind.sigs.k8s.io/) (Kubernets in Docker)
+
+### Locally
+
+```bash
+# Automated - runs everything
+make integration-test-kind
+
+# Or use the script directly
+./test/kind-integration-test.sh
+```
+
+The script will:
+1. Deploy PostgreSQL and mock-splunk in a test pod
+2. Run your integration tests against those services
+3. Report results
+
+Alternatively, if you have PostgreSQL and Splunk running locally:
+
+```bash
+# Set up environment (optional if using defaults)
+export DB_HOST=localhost
+export DB_PORT=5432
+export SPLUNK_ENDPOINT=http://localhost:8088
+export SPLUNK_TOKEN=your-token-here
+
+# Run tests
+go test -v -tags integration ./test
+```
