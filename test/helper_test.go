@@ -4,9 +4,7 @@
 package test
 
 import (
-	"context"
 	"crypto/tls"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -20,10 +18,6 @@ import (
 	"time"
 
 	"github.com/app-sre/gabi/pkg/env/user"
-	"github.com/orlangure/gnomock"
-	"github.com/orlangure/gnomock/preset/postgres"
-	"github.com/orlangure/gnomock/preset/splunk"
-	"github.com/stretchr/testify/require"
 )
 
 func dummyHTTPClient() http.Client {
@@ -113,64 +107,6 @@ func deleteSplunkIngestToken(t *testing.T, client http.Client, host, port, passw
 	if resp.StatusCode != http.StatusOK {
 		t.Logf("Token deletion returned status: %d", resp.StatusCode)
 	}
-}
-
-func startPostgres(t *testing.T) *gnomock.Container {
-	p := postgres.Preset(
-		postgres.WithUser("gnomock", "gnomick"),
-		postgres.WithDatabase("mydb"),
-	)
-
-	healthcheck := func(ctx context.Context, c *gnomock.Container) error {
-		connStr := fmt.Sprintf("host=%s port=%d user=gnomock password=gnomick dbname=mydb sslmode=disable",
-			c.Host, c.DefaultPort())
-		db, err := sql.Open("pgx", connStr)
-		if err != nil {
-			return err
-		}
-		defer db.Close()
-		return db.PingContext(ctx)
-	}
-
-	options := []gnomock.Option{
-		gnomock.WithUseLocalImagesFirst(),
-		gnomock.WithEnv("POSTGRESQL_USER=gnomock"),
-		gnomock.WithEnv("POSTGRESQL_PASSWORD=gnomick"),
-		gnomock.WithEnv("POSTGRESQL_DATABASE=mydb"),
-		gnomock.WithHealthCheck(healthcheck),
-	}
-
-	psql, err := gnomock.StartCustom("registry.redhat.io/rhel9/postgresql-16:9.6", p.Ports(),
-		options...,
-	)
-	require.NoError(t, err)
-
-	t.Cleanup(func() { _ = gnomock.Stop(psql) })
-
-	return psql
-}
-
-func startSplunk(t *testing.T, password string) *gnomock.Container {
-	s := splunk.Preset(
-		splunk.WithVersion("latest"),
-		splunk.WithLicense(true),
-		splunk.WithPassword(password),
-	)
-
-	options := s.Options()
-	options = append(options,
-		gnomock.WithUseLocalImagesFirst(),
-		gnomock.WithEnv("SPLUNK_GENERAL_TERMS=--accept-sgt-current-at-splunk-com"),
-	)
-
-	splunk, err := gnomock.StartCustom("quay.io/app-sre/splunk:latest", s.Ports(),
-		options...,
-	)
-	require.NoError(t, err)
-
-	t.Cleanup(func() { _ = gnomock.Stop(splunk) })
-
-	return splunk
 }
 
 func setEnvironment(configFile, dbHost, dbPort, dbWrite, splunkToken, splunkEndpoint string) {
