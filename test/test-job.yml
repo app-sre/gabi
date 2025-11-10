@@ -1,0 +1,106 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: gabi-integration-test-job
+  labels:
+    app: gabi-integration-test
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        app: gabi-integration-test
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: integration-test
+        image: {{FULL_IMAGE_NAME}}
+        imagePullPolicy: Never
+        env:
+        # Database configuration (pointing to test-pod)
+        - name: DB_DRIVER
+          value: "pgx"
+        - name: DB_HOST
+          value: "test-pod"
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_USER
+          value: "gabi"
+        - name: DB_PASS
+          value: "passwd"
+        - name: DB_NAME
+          value: "mydb"
+        - name: DB_WRITE
+          value: "false"
+        # Splunk configuration (pointing to test-pod)
+        # Note: SPLUNK_TOKEN is created dynamically by tests
+        - name: SPLUNK_HOST
+          value: "test-pod"
+        - name: SPLUNK_INDEX
+          value: "main"
+        # Other configuration
+        - name: HOST
+          value: "test"
+        - name: NAMESPACE
+          value: "test"
+        - name: POD_NAME
+          value: "gabi-integration-test-runner"
+        # Test timeout
+        - name: INTEGRATION_TEST_TIMEOUT
+          value: "10m"
+        # Use shell to add startup delay for DNS/network propagation
+        # This allows pod networking/DNS to fully initialize before tests start
+        # Run each test separately to avoid port 8080 conflicts between tests
+        command: ["/bin/sh"]
+        args:
+        - "-c"
+        - |
+          sleep 10
+          echo "Starting integration tests - running each test separately to avoid port conflicts"
+
+          # Get list of tests (avoid pipe to preserve exit codes)
+          test_list=$(/usr/local/bin/integration.test -test.list '.*' | grep '^Test')
+
+          # Track results
+          total_tests=0
+          passed_tests=0
+          failed_tests=0
+          failed_test_names=""
+
+          # Run each test (continue even if one fails)
+          for test in $test_list; do
+            total_tests=$((total_tests + 1))
+            echo ""
+            echo "=========================================="
+            echo "Running test: $test"
+            echo "=========================================="
+            if /usr/local/bin/integration.test -test.run "^${test}$" -test.v -test.timeout=5m; then
+              echo "✓ $test PASSED"
+              passed_tests=$((passed_tests + 1))
+            else
+              echo "✗ $test FAILED"
+              failed_tests=$((failed_tests + 1))
+              failed_test_names="$failed_test_names  - $test\n"
+            fi
+          done
+
+          # Summary
+          echo ""
+          echo "=========================================="
+          echo "TEST SUMMARY"
+          echo "=========================================="
+          echo "Total tests: $total_tests"
+          echo "Passed: $passed_tests"
+          echo "Failed: $failed_tests"
+          echo ""
+
+          if [ ${failed_tests} -gt 0 ]; then
+            echo "Failed tests:"
+            echo -e "$failed_test_names"
+            echo "=========================================="
+            exit 1
+          else
+            echo "All tests passed! ✅"
+            echo "=========================================="
+            exit 0
+          fi
