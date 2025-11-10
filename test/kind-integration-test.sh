@@ -146,158 +146,85 @@ echo ""
 echo "Verifying service endpoints..."
 kubectl get endpoints test-pod
 
-# Step 7: Create a temporary pod manifest for running tests
+# Step 7: Create test job
 echo ""
-echo "Step 7: Creating test runner pod..."
+echo "Step 7: Creating test job..."
 # Podman tags images with localhost/ prefix, so we need to use the full reference
 FULL_IMAGE_NAME="localhost/${IMAGE_NAME}"
-cat > /tmp/gabi-integration-test-pod.yaml <<EOF
-apiVersion: v1
-kind: Pod
-metadata:
-  name: gabi-integration-test-runner
-  labels:
-    app: gabi-integration-test
-spec:
-  restartPolicy: Never
-  containers:
-  - name: test-runner
-    image: ${FULL_IMAGE_NAME}
-    imagePullPolicy: Never
-    env:
-    # Database configuration (pointing to test-pod)
-    - name: DB_DRIVER
-      value: "pgx"
-    - name: DB_HOST
-      value: "test-pod"
-    - name: DB_PORT
-      value: "5432"
-    - name: DB_USER
-      value: "gabi"
-    - name: DB_PASS
-      value: "passwd"
-    - name: DB_NAME
-      value: "mydb"
-    - name: DB_WRITE
-      value: "false"
-    # Splunk configuration (pointing to test-pod)
-    # Note: SPLUNK_TOKEN is created dynamically by tests
-    - name: SPLUNK_HOST
-      value: "test-pod"
-    - name: SPLUNK_INDEX
-      value: "main"
-    # Other configuration
-    - name: HOST
-      value: "test"
-    - name: NAMESPACE
-      value: "${NAMESPACE}"
-    - name: POD_NAME
-      value: "gabi-integration-test-runner"
-    # Test timeout
-    - name: INTEGRATION_TEST_TIMEOUT
-      value: "10m"
-    # Use shell to add startup delay for DNS/network propagation
-    # This allows pod networking/DNS to fully initialize before tests start
-    # Run each test separately to avoid port 8080 conflicts between tests
-    command: ["/bin/sh"]
-    args:
-    - "-c"
-    - |
-      sleep 10
-      echo "Starting integration tests - running each test separately to avoid port conflicts"
+sed "s|{{FULL_IMAGE_NAME}}|${FULL_IMAGE_NAME}|g" test/test-job.yml | kubectl apply -f -
 
-      # Get list of tests (avoid pipe to preserve exit codes)
-      test_list=\$(/usr/local/bin/integration.test -test.list '.*' | grep '^Test')
+# Step 8: Follow test logs in real-time
+echo ""
+echo "Step 8: Following test execution (streaming logs)..."
+echo "Waiting for test job pod to start..."
 
-      # Track results
-      total_tests=0
-      passed_tests=0
-      failed_tests=0
-      failed_test_names=""
-
-      # Run each test (continue even if one fails)
-      for test in \$test_list; do
-        total_tests=\$((total_tests + 1))
-        echo ""
-        echo "=========================================="
-        echo "Running test: \${test}"
-        echo "=========================================="
-        if /usr/local/bin/integration.test -test.run "^\${test}\$" -test.v -test.timeout=5m; then
-          echo "✓ \${test} PASSED"
-          passed_tests=\$((passed_tests + 1))
-        else
-          echo "✗ \${test} FAILED"
-          failed_tests=\$((failed_tests + 1))
-          failed_test_names="\${failed_test_names}  - \${test}\n"
+# Wait for the job pod to be created and start running
+for i in {1..30}; do
+    POD_NAME=$(kubectl get pods -l app=gabi-integration-test -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+    if [ -n "$POD_NAME" ]; then
+        POD_STATUS=$(kubectl get pod "$POD_NAME" -o jsonpath='{.status.phase}' 2>/dev/null || echo "")
+        if [ "$POD_STATUS" = "Running" ] || [ "$POD_STATUS" = "Succeeded" ] || [ "$POD_STATUS" = "Failed" ]; then
+            echo "Test pod started: $POD_NAME"
+            break
         fi
-      done
-
-      # Summary
-      echo ""
-      echo "=========================================="
-      echo "TEST SUMMARY"
-      echo "=========================================="
-      echo "Total tests: \${total_tests}"
-      echo "Passed: \${passed_tests}"
-      echo "Failed: \${failed_tests}"
-      echo ""
-
-      if [ \${failed_tests} -gt 0 ]; then
-        echo "Failed tests:"
-        echo -e "\${failed_test_names}"
-        echo "=========================================="
-        exit 1
-      else
-        echo "All tests passed! ✅"
-        echo "=========================================="
-        exit 0
-      fi
-EOF
-
-# Step 8: Run the integration tests
-echo ""
-echo "Step 8: Running integration tests..."
-kubectl apply -f /tmp/gabi-integration-test-pod.yaml
-
-# Step 9: Follow test logs
-echo ""
-echo "Step 9: Watching test execution..."
-echo "Waiting for test pod container to start..."
-
-# Wait for pod to be running (not just initialized)
-until kubectl get pod gabi-integration-test-runner -o jsonpath='{.status.phase}' 2>/dev/null | grep -q "Running"; do
-    echo "Waiting for container to start..."
+    fi
+    if [ "$i" -eq 30 ]; then
+        echo "⚠️  Warning: Test pod did not start within 60 seconds"
+        echo "Attempting to show logs anyway..."
+    fi
     sleep 2
 done
 
-echo "Container is running, following logs..."
 echo ""
-echo "=== Test Output ==="
-kubectl logs -f gabi-integration-test-runner || true
+echo "=== Test Output (streaming) ==="
+# Follow logs in real-time until the pod completes
+kubectl logs -f job/gabi-integration-test-job 2>&1 || true
 
-
-
-# Step 10: Check test results
 echo ""
-echo "Step 10: Checking test results..."
-TEST_EXIT_CODE=$(kubectl get pod gabi-integration-test-runner -o jsonpath='{.status.containerStatuses[0].state.terminated.exitCode}' 2>/dev/null || echo "unknown")
+echo "=== Test execution finished ==="
 
-if [ "$TEST_EXIT_CODE" = "0" ]; then
+# Step 9: Check test results
+echo ""
+echo "Step 9: Checking test results..."
+echo "Waiting for job status to be updated..."
+
+# Wait for the job to have a completion status (Kubernetes needs time to update after pod finishes)
+for i in {1..30}; do
+    JOB_COMPLETE=$(kubectl get job gabi-integration-test-job -o jsonpath='{.status.conditions[?(@.type=="Complete")].status}' 2>/dev/null || echo "")
+    JOB_FAILED=$(kubectl get job gabi-integration-test-job -o jsonpath='{.status.conditions[?(@.type=="Failed")].status}' 2>/dev/null || echo "")
+
+    if [ "$JOB_COMPLETE" = "True" ] || [ "$JOB_FAILED" = "True" ]; then
+        break
+    fi
+
+    if [ "$i" -eq 30 ]; then
+        echo "⚠️  Warning: Job status not updated after 60 seconds"
+        break
+    fi
+
+    sleep 2
+done
+
+if [ "$JOB_COMPLETE" = "True" ]; then
     echo "✅ Integration tests PASSED!"
     EXIT_STATUS=0
+elif [ "$JOB_FAILED" = "True" ]; then
+    echo "❌ Integration tests FAILED"
+    EXIT_STATUS=1
 else
-    echo "❌ Integration tests FAILED (exit code: ${TEST_EXIT_CODE})"
+    echo "⚠️  Integration tests did not complete normally"
     EXIT_STATUS=1
 fi
 
-# Step 11: Cleanup (optional)
+# Step 10: Cleanup (optional)
 echo ""
 read -p "Do you want to clean up the test resources? (y/N) " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo "Cleaning up..."
-    kubectl delete pod/gabi-integration-test-runner --ignore-not-found=true
+    kubectl delete job/gabi-integration-test-job --ignore-not-found=true
     kubectl delete pod/test-pod --ignore-not-found=true
+    kubectl delete service/test-pod --ignore-not-found=true
     echo "Cleanup complete!"
 fi
 
