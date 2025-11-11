@@ -1,21 +1,36 @@
 #!/usr/bin/env bash
 #
-# Integration test runner for Konflux ephemeral namespace
+# Integration test runner using oc CLI
+# Works on both local Kind clusters and OpenShift clusters
 #
 
 set -o errexit
 set -o nounset
 set -o pipefail
 
-echo "=== Gabi Integration Test on Konflux ephemeral namespace ==="
+echo "=== Gabi Integration Test ==="
 echo ""
 
+# Configuration
+IMAGE_URL="${IMAGE_URL:-localhost/gabi-integration-test:local}"
+IMAGE_DIGEST="${IMAGE_DIGEST:-}"
+
 echo "Image URL: ${IMAGE_URL}"
-echo "Image Digest: ${IMAGE_DIGEST}"
+if [ -n "${IMAGE_DIGEST}" ]; then
+    echo "Image Digest: ${IMAGE_DIGEST}"
+fi
+echo ""
+
+# Check prerequisites
+if ! command -v oc &> /dev/null; then
+    echo "Error: oc is not installed. Please install oc CLI first."
+    exit 1
+fi
 
 # Step 1: Deploy supporting services (database and mock-splunk)
 echo ""
 echo "Step 1: Deploying database and mock-splunk..."
+cd "$(dirname "$0")/.."
 
 # Set the mock-splunk image to the locally built image
 MOCK_SPLUNK_IMAGE="${IMAGE_URL}"
@@ -72,151 +87,77 @@ echo ""
 echo "Verifying service endpoints..."
 oc get endpoints test-pod
 
-# Step 3: Create a temporary pod manifest for running tests
+# Step 3: Create test job
 echo ""
-echo "Step 3: Creating test runner pod..."
-cat > /tmp/gabi-integration-test-pod.yaml <<EOF
-apiVersion: v1
-kind: Pod
-metadata:
-  name: gabi-integration-test-runner
-  labels:
-    app: gabi-integration-test
-spec:
-  restartPolicy: Never
-  containers:
-  - name: test-runner
-    image: ${IMAGE_URL}
-    imagePullPolicy: Never
-    env:
-    # Database configuration (pointing to test-pod)
-    - name: DB_DRIVER
-      value: "pgx"
-    - name: DB_HOST
-      value: "test-pod"
-    - name: DB_PORT
-      value: "5432"
-    - name: DB_USER
-      value: "gabi"
-    - name: DB_PASS
-      value: "passwd"
-    - name: DB_NAME
-      value: "mydb"
-    - name: DB_WRITE
-      value: "false"
-    # Splunk configuration (pointing to test-pod)
-    # Note: SPLUNK_TOKEN is created dynamically by tests
-    - name: SPLUNK_HOST
-      value: "test-pod"
-    - name: SPLUNK_INDEX
-      value: "main"
-    # Other configuration
-    - name: HOST
-      value: "test"
-    - name: NAMESPACE
-      value: "test"
-    - name: POD_NAME
-      value: "gabi-integration-test-runner"
-    # Test timeout
-    - name: INTEGRATION_TEST_TIMEOUT
-      value: "10m"
-    # Use shell to add startup delay for DNS/network propagation
-    # This allows pod networking/DNS to fully initialize before tests start
-    # Run each test separately to avoid port 8080 conflicts between tests
-    command: ["/bin/sh"]
-    args:
-    - "-c"
-    - |
-      sleep 10
-      echo "Starting integration tests - running each test separately to avoid port conflicts"
+echo "Step 3: Creating test job..."
+# Use the full image URL
+FULL_IMAGE_NAME="${IMAGE_URL}"
+sed "s|{{FULL_IMAGE_NAME}}|${FULL_IMAGE_NAME}|g" test/test-job.yml | oc apply -f -
 
-      # Get list of tests (avoid pipe to preserve exit codes)
-      test_list=\$(/usr/local/bin/integration.test -test.list '.*' | grep '^Test')
+# Step 4: Follow test logs in real-time
+echo ""
+echo "Step 4: Following test execution (streaming logs)..."
+echo "Waiting for test job pod to start..."
 
-      # Track results
-      total_tests=0
-      passed_tests=0
-      failed_tests=0
-      failed_test_names=""
-
-      # Run each test (continue even if one fails)
-      for test in \$test_list; do
-        total_tests=\$((total_tests + 1))
-        echo ""
-        echo "=========================================="
-        echo "Running test: \${test}"
-        echo "=========================================="
-        if /usr/local/bin/integration.test -test.run "^\${test}\$" -test.v -test.timeout=5m; then
-          echo "✓ \${test} PASSED"
-          passed_tests=\$((passed_tests + 1))
-        else
-          echo "✗ \${test} FAILED"
-          failed_tests=\$((failed_tests + 1))
-          failed_test_names="\${failed_test_names}  - \${test}\n"
+# Wait for the job pod to be created and start running
+for i in {1..30}; do
+    POD_NAME=$(oc get pods -l app=gabi-integration-test -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+    if [ -n "$POD_NAME" ]; then
+        POD_STATUS=$(oc get pod "$POD_NAME" -o jsonpath='{.status.phase}' 2>/dev/null || echo "")
+        if [ "$POD_STATUS" = "Running" ] || [ "$POD_STATUS" = "Succeeded" ] || [ "$POD_STATUS" = "Failed" ]; then
+            echo "Test pod started: $POD_NAME"
+            break
         fi
-      done
-
-      # Summary
-      echo ""
-      echo "=========================================="
-      echo "TEST SUMMARY"
-      echo "=========================================="
-      echo "Total tests: \${total_tests}"
-      echo "Passed: \${passed_tests}"
-      echo "Failed: \${failed_tests}"
-      echo ""
-
-      if [ \${failed_tests} -gt 0 ]; then
-        echo "Failed tests:"
-        echo -e "\${failed_test_names}"
-        echo "=========================================="
-        exit 1
-      else
-        echo "All tests passed! ✅"
-        echo "=========================================="
-        exit 0
-      fi
-EOF
-
-# Step 4: Run the integration tests
-echo ""
-echo "Step 4: Running integration tests..."
-oc apply -f /tmp/gabi-integration-test-pod.yaml
-
-# Step 5: Follow test logs
-echo ""
-echo "Step 5: Watching test execution..."
-echo "Waiting for test pod container to start..."
-
-# Wait for pod to be running (not just initialized)
-until oc get pod gabi-integration-test-runner -o jsonpath='{.status.phase}' 2>/dev/null | grep -q "Running"; do
-    echo "Waiting for container to start..."
+    fi
+    if [ "$i" -eq 30 ]; then
+        echo "⚠️  Warning: Test pod did not start within 60 seconds"
+        echo "Attempting to show logs anyway..."
+    fi
     sleep 2
 done
 
-echo "Container is running, following logs..."
 echo ""
-echo "=== Test Output ==="
-oc logs -f gabi-integration-test-runner || true
+echo "=== Test Output (streaming) ==="
+# Follow logs in real-time until the pod completes
+oc logs -f job/gabi-integration-test-job 2>&1 || true
 
-
-
-# Step 6: Check test results
 echo ""
-echo "Step 6: Checking test results..."
-TEST_EXIT_CODE=$(oc get pod gabi-integration-test-runner -o jsonpath='{.status.containerStatuses[0].state.terminated.exitCode}' 2>/dev/null || echo "unknown")
+echo "=== Test execution finished ==="
 
-if [ "$TEST_EXIT_CODE" = "0" ]; then
+# Step 5: Check test results
+echo ""
+echo "Step 5: Checking test results..."
+echo "Waiting for job status to be updated..."
+
+# Wait for the job to have a completion status (Kubernetes needs time to update after pod finishes)
+for i in {1..30}; do
+    JOB_COMPLETE=$(oc get job gabi-integration-test-job -o jsonpath='{.status.conditions[?(@.type=="Complete")].status}' 2>/dev/null || echo "")
+    JOB_FAILED=$(oc get job gabi-integration-test-job -o jsonpath='{.status.conditions[?(@.type=="Failed")].status}' 2>/dev/null || echo "")
+
+    if [ "$JOB_COMPLETE" = "True" ] || [ "$JOB_FAILED" = "True" ]; then
+        break
+    fi
+
+    if [ "$i" -eq 30 ]; then
+        echo "⚠️  Warning: Job status not updated after 60 seconds"
+        break
+    fi
+
+    sleep 2
+done
+
+if [ "$JOB_COMPLETE" = "True" ]; then
     echo "✅ Integration tests PASSED!"
     EXIT_STATUS=0
+elif [ "$JOB_FAILED" = "True" ]; then
+    echo "❌ Integration tests FAILED"
+    EXIT_STATUS=1
 else
-    echo "❌ Integration tests FAILED (exit code: ${TEST_EXIT_CODE})"
+    echo "⚠️  Integration tests did not complete normally"
     EXIT_STATUS=1
 fi
 
-echo "Cleaning up..."
-oc delete pod/gabi-integration-test-runner --ignore-not-found=true
-oc delete pod/test-pod --ignore-not-found=true
-echo "Cleanup complete!"
+echo ""
+echo "To clean up test resources, run: make integration-test-clean"
 
 exit $EXIT_STATUS
