@@ -6,14 +6,10 @@ package test
 import (
 	"crypto/tls"
 	"encoding/json"
-	"fmt"
-	"io"
 	"net"
 	"net/http"
-	"net/url"
 	"os"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -44,69 +40,6 @@ func createConfigurationFile(t *testing.T, expiration time.Time, users []string)
 	}
 
 	return file.Name()
-}
-
-func createSplunkIngestToken(t *testing.T, client http.Client, host, port, password string) string {
-	splunkURL := fmt.Sprintf("https://%s:%s/servicesNS/admin/splunk_httpinput/data/inputs/http?output_mode=json", host, port)
-
-	// Use url.Values for proper form encoding
-	data := url.Values{}
-	data.Set("name", "mytokexna")
-
-	req, err := http.NewRequest(http.MethodPost, splunkURL, strings.NewReader(data.Encode()))
-	if err != nil {
-		t.Fatal(err)
-	}
-	req.SetBasicAuth("admin", password)
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer resp.Body.Close()
-
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	response := struct {
-		Entry []struct {
-			Content struct {
-				Token string `json:"token"`
-			} `json:"content"`
-		} `json:"entry"`
-	}{}
-
-	err = json.Unmarshal(respBody, &response)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return response.Entry[0].Content.Token
-}
-
-func deleteSplunkIngestToken(t *testing.T, client http.Client, host, port, password, tokenName string) {
-	splunkURL := fmt.Sprintf("https://%s:%s/servicesNS/admin/splunk_httpinput/data/inputs/http/%s", host, port, tokenName)
-
-	req, err := http.NewRequest(http.MethodDelete, splunkURL, nil)
-	if err != nil {
-		t.Logf("Failed to create delete request: %v", err)
-		return
-	}
-	req.SetBasicAuth("admin", password)
-
-	resp, err := client.Do(req)
-	if err != nil {
-		t.Logf("Failed to delete token: %v", err)
-		return
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		t.Logf("Token deletion returned status: %d", resp.StatusCode)
-	}
 }
 
 func setEnvironment(configFile, dbHost, dbPort, dbWrite, splunkToken, splunkEndpoint string) {
