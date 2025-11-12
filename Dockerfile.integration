@@ -25,11 +25,6 @@ RUN set -eux && \
 RUN set -eux && \
   go test -c -tags integration -o integration.test ./test
 
-# Build the mock-splunk server
-RUN set -eux && \
-  cd test/mock-splunk && \
-  go build -ldflags '-s -w' -o /tmp/mock-splunk .
-
 # Final image
 FROM registry.access.redhat.com/ubi9/ubi-minimal:9.5-1742914212@sha256:ac61c96b93894b9169221e87718733354dd3765dd4a62b275893c7ff0d876869
 
@@ -40,17 +35,44 @@ COPY LICENSE /licenses/LICENSE
 # - bind-utils: DNS tools (nslookup, dig, host)
 # - nmap-ncat: Network testing (nc command)
 # - postgresql: PostgreSQL client (psql command)
+# - java-17-openjdk-headless: Java runtime for WireMock
 RUN microdnf install -y \
-    curl-minimal \
-    bind-utils \
-    nmap-ncat \
-    postgresql && \
-    microdnf clean all
+  curl-minimal \
+  bind-utils \
+  nmap-ncat \
+  postgresql \
+  java-17-openjdk-headless && \
+  microdnf clean all
+
+# Download WireMock standalone JAR
+ENV WIREMOCK_VERSION=3.3.1
+RUN set -eux && \
+  curl -L -f -o /tmp/wiremock-standalone.jar \
+  https://repo1.maven.org/maven2/org/wiremock/wiremock-standalone/${WIREMOCK_VERSION}/wiremock-standalone-${WIREMOCK_VERSION}.jar && \
+  chmod +x /tmp/wiremock-standalone.jar
+
+# Create WireMock directories and copy mappings
+RUN mkdir -p /wiremock/mappings /wiremock/__files
+COPY test/wiremock/mappings/*.json /wiremock/mappings/
+
+# Create WireMock startup script
+RUN printf '#!/bin/sh\n\
+  set -e\n\
+  \n\
+  exec java \\\n\
+  -jar /tmp/wiremock-standalone.jar \\\n\
+  --port 8088 \\\n\
+  --root-dir /wiremock \\\n\
+  --global-response-templating \\\n\
+  --verbose\n' > /usr/local/bin/wiremock && \
+  chmod +x /usr/local/bin/wiremock
+
+# Set ownership of WireMock directories and files for user 1001
+RUN chown -R 1001:1001 /wiremock /tmp/wiremock-standalone.jar
 
 # Copy the binaries from builder
 COPY --from=builder /build/gabi /usr/local/bin/gabi
 COPY --from=builder /build/integration.test /usr/local/bin/integration.test
-COPY --from=builder /tmp/mock-splunk /usr/local/bin/mock-splunk
 
 # Set working directory
 WORKDIR /test

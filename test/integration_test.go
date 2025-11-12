@@ -5,7 +5,6 @@ package test
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -420,12 +419,9 @@ func TestQueryWithRequestTimedOut(t *testing.T) {
 	// Use deployed services instead of starting containers
 	dbHost := getEnvOrDefault("DB_HOST", "localhost")
 	dbPort := getEnvOrDefault("DB_PORT", "5432")
-	splunkHost := getEnvOrDefault("SPLUNK_HOST", "localhost")
 
-	// Create a real Splunk HEC token from test-pod
-	splunkToken := createSplunkIngestToken(t, client, splunkHost, "8089", "splunk/splunk")
-	defer deleteSplunkIngestToken(t, client, splunkHost, "8089", "splunk/splunk", "mytokexna")
-	splunkEndpoint := fmt.Sprintf("http://%s:8088", splunkHost)
+	splunkToken := getEnvOrDefault("SPLUNK_TOKEN", "test123")
+	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8088")
 
 	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
 	defer os.Remove(configFile)
@@ -478,12 +474,9 @@ func TestQueryWithSplunkWrite(t *testing.T) {
 	// Use deployed services instead of starting containers
 	dbHost := getEnvOrDefault("DB_HOST", "localhost")
 	dbPort := getEnvOrDefault("DB_PORT", "5432")
-	splunkHost := getEnvOrDefault("SPLUNK_HOST", "localhost")
+	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8088")
 
-	// Create a real Splunk HEC token from test-pod
-	splunkToken := createSplunkIngestToken(t, client, splunkHost, "8089", "splunk/splunk")
-	defer deleteSplunkIngestToken(t, client, splunkHost, "8089", "splunk/splunk", "mytokexna")
-	splunkEndpoint := fmt.Sprintf("http://%s:8088", splunkHost)
+	splunkToken := getEnvOrDefault("SPLUNK_TOKEN", "test123")
 
 	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
 	defer os.Remove(configFile)
@@ -588,12 +581,9 @@ func TestQueryWithDatabaseWriteAccess(t *testing.T) {
 	// Use deployed services instead of starting containers
 	dbHost := getEnvOrDefault("DB_HOST", "localhost")
 	dbPort := getEnvOrDefault("DB_PORT", "5432")
-	splunkHost := getEnvOrDefault("SPLUNK_HOST", "localhost")
+	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8088")
 
-	// Create a real Splunk HEC token from test-pod
-	splunkToken := createSplunkIngestToken(t, client, splunkHost, "8089", "splunk/splunk")
-	defer deleteSplunkIngestToken(t, client, splunkHost, "8089", "splunk/splunk", "mytokexna")
-	splunkEndpoint := fmt.Sprintf("http://%s:8088", splunkHost)
+	splunkToken := getEnvOrDefault("SPLUNK_TOKEN", "test123")
 
 	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
 	defer os.Remove(configFile)
@@ -647,12 +637,9 @@ func TestQueryWithDatabaseWriteAccessFailure(t *testing.T) {
 	// Use deployed services instead of starting containers
 	dbHost := getEnvOrDefault("DB_HOST", "localhost")
 	dbPort := getEnvOrDefault("DB_PORT", "5432")
-	splunkHost := getEnvOrDefault("SPLUNK_HOST", "localhost")
+	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8088")
 
-	// Create a real Splunk HEC token from test-pod
-	splunkToken := createSplunkIngestToken(t, client, splunkHost, "8089", "splunk/splunk")
-	defer deleteSplunkIngestToken(t, client, splunkHost, "8089", "splunk/splunk", "mytokexna")
-	splunkEndpoint := fmt.Sprintf("http://%s:8088", splunkHost)
+	splunkToken := getEnvOrDefault("SPLUNK_TOKEN", "test123")
 
 	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
 	defer os.Remove(configFile)
@@ -706,12 +693,9 @@ func TestQueryWithBase64EncodedQuery(t *testing.T) {
 	// Use deployed services instead of starting containers
 	dbHost := getEnvOrDefault("DB_HOST", "localhost")
 	dbPort := getEnvOrDefault("DB_PORT", "5432")
-	splunkHost := getEnvOrDefault("SPLUNK_HOST", "localhost")
+	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8088")
 
-	// Create a real Splunk HEC token from test-pod
-	splunkToken := createSplunkIngestToken(t, client, splunkHost, "8089", "splunk/splunk")
-	defer deleteSplunkIngestToken(t, client, splunkHost, "8089", "splunk/splunk", "mytokexna")
-	splunkEndpoint := fmt.Sprintf("http://%s:8088", splunkHost)
+	splunkToken := getEnvOrDefault("SPLUNK_TOKEN", "test123")
 
 	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
 	defer os.Remove(configFile)
@@ -770,12 +754,9 @@ func TestQueryWithBase64EncodedResults(t *testing.T) {
 	// Use deployed services instead of starting containers
 	dbHost := getEnvOrDefault("DB_HOST", "localhost")
 	dbPort := getEnvOrDefault("DB_PORT", "5432")
-	splunkHost := getEnvOrDefault("SPLUNK_HOST", "localhost")
+	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8088")
 
-	// Create a real Splunk HEC token from test-pod
-	splunkToken := createSplunkIngestToken(t, client, splunkHost, "8089", "splunk/splunk")
-	defer deleteSplunkIngestToken(t, client, splunkHost, "8089", "splunk/splunk", "mytokexna")
-	splunkEndpoint := fmt.Sprintf("http://%s:8088", splunkHost)
+	splunkToken := getEnvOrDefault("SPLUNK_TOKEN", "test123")
 
 	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
 	defer os.Remove(configFile)

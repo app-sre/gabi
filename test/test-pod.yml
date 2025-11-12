@@ -37,7 +37,7 @@ spec:
   - name: mock-splunk
     image: {{MOCK_SPLUNK_IMAGE}}
     imagePullPolicy: IfNotPresent
-    command: ["/usr/local/bin/mock-splunk"]
+    command: ["/usr/local/bin/wiremock"]
     ports:
     - containerPort: 8088
       name: hec
@@ -45,11 +45,11 @@ spec:
       name: api
     resources:
       requests:
-        memory: "64Mi"
-        cpu: "50m"
-      limits:
         memory: "128Mi"
-        cpu: "200m"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "500m"
     readinessProbe:
       httpGet:
         path: /services/collector/health/1.0
