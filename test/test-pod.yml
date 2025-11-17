@@ -14,14 +14,10 @@ spec:
     protocol: TCP
     port: 5432
     targetPort: 5432
-  - name: splunk-hec
+  - name: wiremock
     protocol: TCP
-    port: 8088
-    targetPort: 8088
-  - name: splunk-api
-    protocol: TCP
-    port: 8089
-    targetPort: 8089
+    port: 8080
+    targetPort: 8080
   clusterIP: None  # Headless service for direct pod access
 ---
 apiVersion: v1
