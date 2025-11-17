@@ -1,6 +1,8 @@
 module github.com/app-sre/gabi
 
-go 1.22
+go 1.23
+
+toolchain go1.24.6
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
@@ -40,7 +42,7 @@ require (
 	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/rogpeppe/go-internal v1.9.0 // indirect
+	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
