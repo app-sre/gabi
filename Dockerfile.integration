@@ -40,35 +40,8 @@ RUN microdnf install -y \
   curl-minimal \
   bind-utils \
   nmap-ncat \
-  postgresql \
-  java-17-openjdk-headless && \
+  postgresql && \
   microdnf clean all
-
-# Download WireMock standalone JAR
-ENV WIREMOCK_VERSION=3.3.1
-RUN set -eux && \
-  curl -L -f -o /tmp/wiremock-standalone.jar \
-  https://repo1.maven.org/maven2/org/wiremock/wiremock-standalone/${WIREMOCK_VERSION}/wiremock-standalone-${WIREMOCK_VERSION}.jar && \
-  chmod +x /tmp/wiremock-standalone.jar
-
-# Create WireMock directories and copy mappings
-RUN mkdir -p /wiremock/mappings /wiremock/__files
-COPY test/wiremock/mappings/*.json /wiremock/mappings/
-
-# Create WireMock startup script
-RUN printf '#!/bin/sh\n\
-  set -e\n\
-  \n\
-  exec java \\\n\
-  -jar /tmp/wiremock-standalone.jar \\\n\
-  --port 8088 \\\n\
-  --root-dir /wiremock \\\n\
-  --global-response-templating \\\n\
-  --verbose\n' > /usr/local/bin/wiremock && \
-  chmod +x /usr/local/bin/wiremock
-
-# Set ownership of WireMock directories and files for user 1001
-RUN chown -R 1001:1001 /wiremock /tmp/wiremock-standalone.jar
 
 # Copy the binaries from builder
 COPY --from=builder /build/gabi /usr/local/bin/gabi
@@ -87,7 +60,7 @@ ENV DB_NAME=mydb
 ENV DB_WRITE=false
 ENV SPLUNK_INDEX=main
 ENV SPLUNK_TOKEN=test
-ENV SPLUNK_ENDPOINT=http://test-pod:8088
+ENV SPLUNK_ENDPOINT=http://test-pod:8080
 ENV HOST=test
 ENV NAMESPACE=test
 ENV POD_NAME=test-pod
