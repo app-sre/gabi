@@ -27,19 +27,20 @@ if ! command -v oc &> /dev/null; then
     exit 1
 fi
 
-# Step 1: Deploy supporting services (database and mock-splunk)
+# Step 1: Create wiremock mappings ConfigMap
 echo ""
-echo "Step 1: Deploying database and mock-splunk..."
+echo "Step 1: Creating wiremock mappings ConfigMap..."
+oc create configmap wiremock-mappings --from-file=test/wiremock/mappings
+
+# Step 2 Deploy supporting services (database and mock-splunk)
+echo ""
+echo "Step 2 Deploying database and mock-splunk..."
 cd "$(dirname "$0")/.."
+oc apply -f test/test-pod.yml
 
-# Set the mock-splunk image to the locally built image
-MOCK_SPLUNK_IMAGE="${IMAGE_URL}"
-echo "Using mock-splunk image: ${MOCK_SPLUNK_IMAGE}"
-sed "s|{{MOCK_SPLUNK_IMAGE}}|${MOCK_SPLUNK_IMAGE}|g" test/test-pod.yml | oc apply -f -
-
-# Step 2: Wait for supporting services to be ready
+# Step 3: Wait for supporting services to be ready
 echo ""
-echo "Step 2: Waiting for services to be ready..."
+echo "Step 3: Waiting for services to be ready..."
 echo "Waiting for test-pod to be ready..."
 echo ""
 
@@ -87,16 +88,16 @@ echo ""
 echo "Verifying service endpoints..."
 oc get endpoints test-pod
 
-# Step 3: Create test job
+# Step 4: Create test job
 echo ""
-echo "Step 3: Creating test job..."
+echo "Step 4: Creating test job..."
 # Use the full image URL
 FULL_IMAGE_NAME="${IMAGE_URL}"
 sed "s|{{FULL_IMAGE_NAME}}|${FULL_IMAGE_NAME}|g" test/test-job.yml | oc apply -f -
 
-# Step 4: Follow test logs in real-time
+# Step 5: Follow test logs in real-time
 echo ""
-echo "Step 4: Following test execution (streaming logs)..."
+echo "Step 5: Following test execution (streaming logs)..."
 echo "Waiting for test job pod to start..."
 
 # Wait for the job pod to be created and start running
@@ -124,9 +125,9 @@ oc logs -f job/gabi-integration-test-job 2>&1 || true
 echo ""
 echo "=== Test execution finished ==="
 
-# Step 5: Check test results
+# Step 6: Check test results
 echo ""
-echo "Step 5: Checking test results..."
+echo "Step 6: Checking test results..."
 echo "Waiting for job status to be updated..."
 
 # Wait for the job to have a completion status (Kubernetes needs time to update after pod finishes)
