@@ -31,7 +31,7 @@ func TestHealthCheckOK(t *testing.T) {
 	// Use deployed services instead of starting containers
 	dbHost := getEnvOrDefault("DB_HOST", "localhost")
 	dbPort := getEnvOrDefault("DB_PORT", "5432")
-	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8088")
+	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8080")
 	splunkToken := getEnvOrDefault("SPLUNK_TOKEN", "test123")
 
 	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
@@ -101,7 +101,7 @@ func TestQueryWithMissingHeader(t *testing.T) {
 	// Use deployed services instead of starting containers
 	dbHost := getEnvOrDefault("DB_HOST", "localhost")
 	dbPort := getEnvOrDefault("DB_PORT", "5432")
-	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8088")
+	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8080")
 	splunkToken := getEnvOrDefault("SPLUNK_TOKEN", "test123")
 
 	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
@@ -145,7 +145,7 @@ func TestQueryWithMalformedBase64EncodedQuery(t *testing.T) {
 	// Use deployed services instead of starting containers
 	dbHost := getEnvOrDefault("DB_HOST", "localhost")
 	dbPort := getEnvOrDefault("DB_PORT", "5432")
-	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8088")
+	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8080")
 	splunkToken := getEnvOrDefault("SPLUNK_TOKEN", "test123")
 
 	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
@@ -195,7 +195,7 @@ func TestQueryWithMissingBody(t *testing.T) {
 	// Use deployed services instead of starting containers
 	dbHost := getEnvOrDefault("DB_HOST", "localhost")
 	dbPort := getEnvOrDefault("DB_PORT", "5432")
-	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8088")
+	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8080")
 	splunkToken := getEnvOrDefault("SPLUNK_TOKEN", "test123")
 
 	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
@@ -240,7 +240,7 @@ func TestQueryWithExpiredInstance(t *testing.T) {
 	// Use deployed services instead of starting containers
 	dbHost := getEnvOrDefault("DB_HOST", "localhost")
 	dbPort := getEnvOrDefault("DB_PORT", "5432")
-	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8088")
+	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8080")
 	splunkToken := getEnvOrDefault("SPLUNK_TOKEN", "test123")
 
 	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, -1), []string{"test"})
@@ -288,7 +288,7 @@ func TestQueryWithUnauthorizedAccess(t *testing.T) {
 	// Use deployed services instead of starting containers
 	dbHost := getEnvOrDefault("DB_HOST", "localhost")
 	dbPort := getEnvOrDefault("DB_PORT", "5432")
-	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8088")
+	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8080")
 	splunkToken := getEnvOrDefault("SPLUNK_TOKEN", "test123")
 
 	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{})
@@ -333,7 +333,7 @@ func TestQueryWithForbiddenUserAccess(t *testing.T) {
 	// Use deployed services instead of starting containers
 	dbHost := getEnvOrDefault("DB_HOST", "localhost")
 	dbPort := getEnvOrDefault("DB_PORT", "5432")
-	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8088")
+	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8080")
 	splunkToken := getEnvOrDefault("SPLUNK_TOKEN", "test123")
 
 	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
@@ -378,7 +378,7 @@ func TestQueryWithAccessUsingEnvironment(t *testing.T) {
 	// Use deployed services instead of starting containers
 	dbHost := getEnvOrDefault("DB_HOST", "localhost")
 	dbPort := getEnvOrDefault("DB_PORT", "5432")
-	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8088")
+	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8080")
 	splunkToken := getEnvOrDefault("SPLUNK_TOKEN", "test123")
 
 	os.Setenv("EXPIRATION_DATE", time.Now().AddDate(0, 0, 1).Format(user.ExpiryDateLayout))
@@ -421,7 +421,7 @@ func TestQueryWithRequestTimedOut(t *testing.T) {
 	dbPort := getEnvOrDefault("DB_PORT", "5432")
 
 	splunkToken := getEnvOrDefault("SPLUNK_TOKEN", "test123")
-	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8088")
+	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8080")
 
 	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
 	defer os.Remove(configFile)
@@ -474,7 +474,7 @@ func TestQueryWithSplunkWrite(t *testing.T) {
 	// Use deployed services instead of starting containers
 	dbHost := getEnvOrDefault("DB_HOST", "localhost")
 	dbPort := getEnvOrDefault("DB_PORT", "5432")
-	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8088")
+	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8080")
 
 	splunkToken := getEnvOrDefault("SPLUNK_TOKEN", "test123")
 
@@ -538,7 +538,7 @@ func TestQueryWithSplunkWriteFailure(t *testing.T) {
 		dbPort,
 		"false",
 		"test",
-		"http://localhost:8088",
+		"http://localhost:8080",
 	)
 	defer os.Clearenv()
 
@@ -581,7 +581,7 @@ func TestQueryWithDatabaseWriteAccess(t *testing.T) {
 	// Use deployed services instead of starting containers
 	dbHost := getEnvOrDefault("DB_HOST", "localhost")
 	dbPort := getEnvOrDefault("DB_PORT", "5432")
-	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8088")
+	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8080")
 
 	splunkToken := getEnvOrDefault("SPLUNK_TOKEN", "test123")
 
@@ -637,7 +637,7 @@ func TestQueryWithDatabaseWriteAccessFailure(t *testing.T) {
 	// Use deployed services instead of starting containers
 	dbHost := getEnvOrDefault("DB_HOST", "localhost")
 	dbPort := getEnvOrDefault("DB_PORT", "5432")
-	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8088")
+	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8080")
 
 	splunkToken := getEnvOrDefault("SPLUNK_TOKEN", "test123")
 
@@ -693,7 +693,7 @@ func TestQueryWithBase64EncodedQuery(t *testing.T) {
 	// Use deployed services instead of starting containers
 	dbHost := getEnvOrDefault("DB_HOST", "localhost")
 	dbPort := getEnvOrDefault("DB_PORT", "5432")
-	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8088")
+	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8080")
 
 	splunkToken := getEnvOrDefault("SPLUNK_TOKEN", "test123")
 
@@ -754,7 +754,7 @@ func TestQueryWithBase64EncodedResults(t *testing.T) {
 	// Use deployed services instead of starting containers
 	dbHost := getEnvOrDefault("DB_HOST", "localhost")
 	dbPort := getEnvOrDefault("DB_PORT", "5432")
-	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8088")
+	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8080")
 
 	splunkToken := getEnvOrDefault("SPLUNK_TOKEN", "test123")
 

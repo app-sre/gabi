@@ -231,7 +231,7 @@ Alternatively, if you have PostgreSQL and Splunk running locally:
 # Set up environment (optional if using defaults)
 export DB_HOST=localhost
 export DB_PORT=5432
-export SPLUNK_ENDPOINT=http://localhost:8088
+export SPLUNK_ENDPOINT=http://localhost:8080
 export SPLUNK_TOKEN=your-token-here
 
 # Run tests
