@@ -15,7 +15,7 @@ spec:
       containers:
       - name: integration-test
         image: {{FULL_IMAGE_NAME}}
-        imagePullPolicy: Never
+        imagePullPolicy: IfNotPresent
         env:
         # Database configuration (pointing to test-pod)
         - name: DB_DRIVER
