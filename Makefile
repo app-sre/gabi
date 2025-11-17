@@ -44,6 +44,7 @@ integration-test-clean:
 	@oc delete job/gabi-integration-test-job --ignore-not-found=true
 	@oc delete pod/test-pod --ignore-not-found=true
 	@oc delete service/test-pod --ignore-not-found=true
+	@oc delete configmap/wiremock-mappings --ignore-not-found=true
 	@echo "✅ Cleanup complete!"
 
 # Delete the Kind cluster
