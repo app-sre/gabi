@@ -35,7 +35,6 @@ COPY LICENSE /licenses/LICENSE
 # - bind-utils: DNS tools (nslookup, dig, host)
 # - nmap-ncat: Network testing (nc command)
 # - postgresql: PostgreSQL client (psql command)
-# - java-17-openjdk-headless: Java runtime for WireMock
 RUN microdnf install -y \
   curl-minimal \
   bind-utils \
