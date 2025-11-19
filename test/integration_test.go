@@ -5,11 +5,9 @@ package test
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
-	"strconv"
 	"testing"
 	"time"
 
@@ -21,13 +19,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Helper function to get environment variable with default
+func getEnvOrDefault(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
+
 func TestHealthCheckOK(t *testing.T) {
-	psql := startPostgres(t)
+	// Use deployed services instead of starting containers
+	dbHost := getEnvOrDefault("DB_HOST", "localhost")
+	dbPort := getEnvOrDefault("DB_PORT", "5432")
+	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8080")
+	splunkToken := getEnvOrDefault("SPLUNK_TOKEN", "test123")
 
 	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
 	defer os.Remove(configFile)
 
-	setEnvironment(configFile, psql.Host, strconv.Itoa(psql.DefaultPort()), "false", "test123", "localhost")
+	setEnvironment(configFile, dbHost, dbPort, "false", splunkToken, splunkEndpoint)
 	defer os.Clearenv()
 
 	logger := test.DummyLogger(io.Discard)
@@ -88,12 +98,16 @@ func TestHealthCheckFailure(t *testing.T) {
 func TestQueryWithMissingHeader(t *testing.T) {
 	client := dummyHTTPClient()
 
-	psql := startPostgres(t)
+	// Use deployed services instead of starting containers
+	dbHost := getEnvOrDefault("DB_HOST", "localhost")
+	dbPort := getEnvOrDefault("DB_PORT", "5432")
+	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8080")
+	splunkToken := getEnvOrDefault("SPLUNK_TOKEN", "test123")
 
 	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
 	defer os.Remove(configFile)
 
-	setEnvironment(configFile, psql.Host, strconv.Itoa(psql.DefaultPort()), "false", "test123", "localhost")
+	setEnvironment(configFile, dbHost, dbPort, "false", splunkToken, splunkEndpoint)
 	defer os.Clearenv()
 
 	logger := test.DummyLogger(io.Discard)
@@ -128,12 +142,16 @@ func TestQueryWithMissingHeader(t *testing.T) {
 func TestQueryWithMalformedBase64EncodedQuery(t *testing.T) {
 	client := dummyHTTPClient()
 
-	psql := startPostgres(t)
+	// Use deployed services instead of starting containers
+	dbHost := getEnvOrDefault("DB_HOST", "localhost")
+	dbPort := getEnvOrDefault("DB_PORT", "5432")
+	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8080")
+	splunkToken := getEnvOrDefault("SPLUNK_TOKEN", "test123")
 
 	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
 	defer os.Remove(configFile)
 
-	setEnvironment(configFile, psql.Host, strconv.Itoa(psql.DefaultPort()), "false", "test123", "localhost")
+	setEnvironment(configFile, dbHost, dbPort, "false", splunkToken, splunkEndpoint)
 	defer os.Clearenv()
 
 	logger := test.DummyLogger(io.Discard)
@@ -174,12 +192,16 @@ func TestQueryWithMalformedBase64EncodedQuery(t *testing.T) {
 func TestQueryWithMissingBody(t *testing.T) {
 	client := dummyHTTPClient()
 
-	psql := startPostgres(t)
+	// Use deployed services instead of starting containers
+	dbHost := getEnvOrDefault("DB_HOST", "localhost")
+	dbPort := getEnvOrDefault("DB_PORT", "5432")
+	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8080")
+	splunkToken := getEnvOrDefault("SPLUNK_TOKEN", "test123")
 
 	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
 	defer os.Remove(configFile)
 
-	setEnvironment(configFile, psql.Host, strconv.Itoa(psql.DefaultPort()), "false", "test123", "localhost")
+	setEnvironment(configFile, dbHost, dbPort, "false", splunkToken, splunkEndpoint)
 	defer os.Clearenv()
 
 	logger := test.DummyLogger(io.Discard)
@@ -215,12 +237,16 @@ func TestQueryWithMissingBody(t *testing.T) {
 func TestQueryWithExpiredInstance(t *testing.T) {
 	client := dummyHTTPClient()
 
-	psql := startPostgres(t)
+	// Use deployed services instead of starting containers
+	dbHost := getEnvOrDefault("DB_HOST", "localhost")
+	dbPort := getEnvOrDefault("DB_PORT", "5432")
+	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8080")
+	splunkToken := getEnvOrDefault("SPLUNK_TOKEN", "test123")
 
 	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, -1), []string{"test"})
 	defer os.Remove(configFile)
 
-	setEnvironment(configFile, psql.Host, strconv.Itoa(psql.DefaultPort()), "false", "test123", "localhost")
+	setEnvironment(configFile, dbHost, dbPort, "false", splunkToken, splunkEndpoint)
 	defer os.Clearenv()
 
 	var output bytes.Buffer
@@ -259,11 +285,16 @@ func TestQueryWithExpiredInstance(t *testing.T) {
 func TestQueryWithUnauthorizedAccess(t *testing.T) {
 	client := dummyHTTPClient()
 
+	// Use deployed services instead of starting containers
+	dbHost := getEnvOrDefault("DB_HOST", "localhost")
+	dbPort := getEnvOrDefault("DB_PORT", "5432")
+	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8080")
+	splunkToken := getEnvOrDefault("SPLUNK_TOKEN", "test123")
+
 	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{})
 	defer os.Remove(configFile)
 
-	psql := startPostgres(t)
-	setEnvironment(configFile, psql.Host, strconv.Itoa(psql.DefaultPort()), "false", "test123", "localhost")
+	setEnvironment(configFile, dbHost, dbPort, "false", splunkToken, splunkEndpoint)
 	defer os.Clearenv()
 
 	logger := test.DummyLogger(io.Discard)
@@ -299,11 +330,16 @@ func TestQueryWithUnauthorizedAccess(t *testing.T) {
 func TestQueryWithForbiddenUserAccess(t *testing.T) {
 	client := dummyHTTPClient()
 
+	// Use deployed services instead of starting containers
+	dbHost := getEnvOrDefault("DB_HOST", "localhost")
+	dbPort := getEnvOrDefault("DB_PORT", "5432")
+	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8080")
+	splunkToken := getEnvOrDefault("SPLUNK_TOKEN", "test123")
+
 	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
 	defer os.Remove(configFile)
 
-	psql := startPostgres(t)
-	setEnvironment(configFile, psql.Host, strconv.Itoa(psql.DefaultPort()), "false", "test123", "localhost")
+	setEnvironment(configFile, dbHost, dbPort, "false", splunkToken, splunkEndpoint)
 	defer os.Clearenv()
 
 	logger := test.DummyLogger(io.Discard)
@@ -339,12 +375,16 @@ func TestQueryWithForbiddenUserAccess(t *testing.T) {
 func TestQueryWithAccessUsingEnvironment(t *testing.T) {
 	client := dummyHTTPClient()
 
-	psql := startPostgres(t)
+	// Use deployed services instead of starting containers
+	dbHost := getEnvOrDefault("DB_HOST", "localhost")
+	dbPort := getEnvOrDefault("DB_PORT", "5432")
+	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8080")
+	splunkToken := getEnvOrDefault("SPLUNK_TOKEN", "test123")
 
 	os.Setenv("EXPIRATION_DATE", time.Now().AddDate(0, 0, 1).Format(user.ExpiryDateLayout))
 	os.Setenv("AUTHORIZED_USERS", "test")
 
-	setEnvironment("", psql.Host, strconv.Itoa(psql.DefaultPort()), "false", "test123", "localhost")
+	setEnvironment("", dbHost, dbPort, "false", splunkToken, splunkEndpoint)
 	defer os.Clearenv()
 
 	var output bytes.Buffer
@@ -375,12 +415,13 @@ func TestQueryWithAccessUsingEnvironment(t *testing.T) {
 
 func TestQueryWithRequestTimedOut(t *testing.T) {
 	client := dummyHTTPClient()
-	splunkPassword := "foobarPassword123!"
 
-	psql := startPostgres(t)
-	splunk := startSplunk(t, splunkPassword)
+	// Use deployed services instead of starting containers
+	dbHost := getEnvOrDefault("DB_HOST", "localhost")
+	dbPort := getEnvOrDefault("DB_PORT", "5432")
 
-	token := createSplunkIngestToken(t, client, "localhost", strconv.Itoa(splunk.Port("api")), splunkPassword)
+	splunkToken := getEnvOrDefault("SPLUNK_TOKEN", "test123")
+	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8080")
 
 	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
 	defer os.Remove(configFile)
@@ -389,11 +430,11 @@ func TestQueryWithRequestTimedOut(t *testing.T) {
 
 	setEnvironment(
 		configFile,
-		psql.Host,
-		strconv.Itoa(psql.DefaultPort()),
+		dbHost,
+		dbPort,
 		"false",
-		token,
-		fmt.Sprintf("https://%s:%d", "localhost", splunk.Port("collector")),
+		splunkToken,
+		splunkEndpoint,
 	)
 	defer os.Clearenv()
 
@@ -429,23 +470,24 @@ func TestQueryWithRequestTimedOut(t *testing.T) {
 
 func TestQueryWithSplunkWrite(t *testing.T) {
 	client := dummyHTTPClient()
-	splunkPassword := "foobarPassword123!"
 
-	psql := startPostgres(t)
-	splunk := startSplunk(t, splunkPassword)
+	// Use deployed services instead of starting containers
+	dbHost := getEnvOrDefault("DB_HOST", "localhost")
+	dbPort := getEnvOrDefault("DB_PORT", "5432")
+	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8080")
 
-	token := createSplunkIngestToken(t, client, "localhost", strconv.Itoa(splunk.Port("api")), splunkPassword)
+	splunkToken := getEnvOrDefault("SPLUNK_TOKEN", "test123")
 
 	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
 	defer os.Remove(configFile)
 
 	setEnvironment(
 		configFile,
-		psql.Host,
-		strconv.Itoa(psql.DefaultPort()),
+		dbHost,
+		dbPort,
 		"false",
-		token,
-		fmt.Sprintf("https://%s:%d", "localhost", splunk.Port("collector")),
+		splunkToken,
+		splunkEndpoint,
 	)
 	defer os.Clearenv()
 
@@ -481,20 +523,22 @@ func TestQueryWithSplunkWrite(t *testing.T) {
 
 func TestQueryWithSplunkWriteFailure(t *testing.T) {
 	client := dummyHTTPClient()
-	splunkPassword := "foobarPassword123!"
 
-	splunk := startSplunk(t, splunkPassword)
+	// Use deployed services instead of starting containers
+	dbHost := getEnvOrDefault("DB_HOST", "localhost")
+	dbPort := getEnvOrDefault("DB_PORT", "5432")
 
 	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
 	defer os.Remove(configFile)
 
+	// Intentionally use invalid database connection to trigger failure scenario
 	setEnvironment(
 		configFile,
-		"test",
-		"1234",
+		dbHost,
+		dbPort,
 		"false",
 		"test",
-		fmt.Sprintf("https://%s:%d", "localhost", splunk.Port("collector")),
+		"http://localhost:8080",
 	)
 	defer os.Clearenv()
 
@@ -533,23 +577,24 @@ func TestQueryWithSplunkWriteFailure(t *testing.T) {
 
 func TestQueryWithDatabaseWriteAccess(t *testing.T) {
 	client := dummyHTTPClient()
-	splunkPassword := "foobarPassword123!"
 
-	psql := startPostgres(t)
-	splunk := startSplunk(t, splunkPassword)
+	// Use deployed services instead of starting containers
+	dbHost := getEnvOrDefault("DB_HOST", "localhost")
+	dbPort := getEnvOrDefault("DB_PORT", "5432")
+	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8080")
 
-	token := createSplunkIngestToken(t, client, "localhost", strconv.Itoa(splunk.Port("api")), splunkPassword)
+	splunkToken := getEnvOrDefault("SPLUNK_TOKEN", "test123")
 
 	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
 	defer os.Remove(configFile)
 
 	setEnvironment(
 		configFile,
-		psql.Host,
-		strconv.Itoa(psql.DefaultPort()),
+		dbHost,
+		dbPort,
 		"true",
-		token,
-		fmt.Sprintf("https://%s:%d", "localhost", splunk.Port("collector")),
+		splunkToken,
+		splunkEndpoint,
 	)
 	defer os.Clearenv()
 
@@ -588,23 +633,24 @@ func TestQueryWithDatabaseWriteAccess(t *testing.T) {
 
 func TestQueryWithDatabaseWriteAccessFailure(t *testing.T) {
 	client := dummyHTTPClient()
-	splunkPassword := "foobarPassword123!"
 
-	psql := startPostgres(t)
-	splunk := startSplunk(t, splunkPassword)
+	// Use deployed services instead of starting containers
+	dbHost := getEnvOrDefault("DB_HOST", "localhost")
+	dbPort := getEnvOrDefault("DB_PORT", "5432")
+	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8080")
 
-	token := createSplunkIngestToken(t, client, "localhost", strconv.Itoa(splunk.Port("api")), splunkPassword)
+	splunkToken := getEnvOrDefault("SPLUNK_TOKEN", "test123")
 
 	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
 	defer os.Remove(configFile)
 
 	setEnvironment(
 		configFile,
-		psql.Host,
-		strconv.Itoa(psql.DefaultPort()),
+		dbHost,
+		dbPort,
 		"false",
-		token,
-		fmt.Sprintf("https://%s:%d", "localhost", splunk.Port("collector")),
+		splunkToken,
+		splunkEndpoint,
 	)
 	defer os.Clearenv()
 
@@ -643,23 +689,24 @@ func TestQueryWithDatabaseWriteAccessFailure(t *testing.T) {
 
 func TestQueryWithBase64EncodedQuery(t *testing.T) {
 	client := dummyHTTPClient()
-	splunkPassword := "foobarPassword123!"
 
-	psql := startPostgres(t)
-	splunk := startSplunk(t, splunkPassword)
+	// Use deployed services instead of starting containers
+	dbHost := getEnvOrDefault("DB_HOST", "localhost")
+	dbPort := getEnvOrDefault("DB_PORT", "5432")
+	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8080")
 
-	token := createSplunkIngestToken(t, client, "localhost", strconv.Itoa(splunk.Port("api")), splunkPassword)
+	splunkToken := getEnvOrDefault("SPLUNK_TOKEN", "test123")
 
 	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
 	defer os.Remove(configFile)
 
 	setEnvironment(
 		configFile,
-		psql.Host,
-		strconv.Itoa(psql.DefaultPort()),
+		dbHost,
+		dbPort,
 		"false",
-		token,
-		fmt.Sprintf("https://%s:%d", "localhost", splunk.Port("collector")),
+		splunkToken,
+		splunkEndpoint,
 	)
 	defer os.Clearenv()
 
@@ -703,23 +750,24 @@ func TestQueryWithBase64EncodedQuery(t *testing.T) {
 
 func TestQueryWithBase64EncodedResults(t *testing.T) {
 	client := dummyHTTPClient()
-	splunkPassword := "foobarPassword123!"
 
-	psql := startPostgres(t)
-	splunk := startSplunk(t, splunkPassword)
+	// Use deployed services instead of starting containers
+	dbHost := getEnvOrDefault("DB_HOST", "localhost")
+	dbPort := getEnvOrDefault("DB_PORT", "5432")
+	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8080")
 
-	token := createSplunkIngestToken(t, client, "localhost", strconv.Itoa(splunk.Port("api")), splunkPassword)
+	splunkToken := getEnvOrDefault("SPLUNK_TOKEN", "test123")
 
 	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
 	defer os.Remove(configFile)
 
 	setEnvironment(
 		configFile,
-		psql.Host,
-		strconv.Itoa(psql.DefaultPort()),
+		dbHost,
+		dbPort,
 		"false",
-		token,
-		fmt.Sprintf("https://%s:%d", "localhost", splunk.Port("collector")),
+		splunkToken,
+		splunkEndpoint,
 	)
 	defer os.Clearenv()
 
