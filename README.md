@@ -208,17 +208,7 @@ DB_WRITE=false
 
 ## Integration tests
 
-Integration tests are defined on `test/integration_test.go`. To run tests locally you will need a container runtime (docker or podman) and [kind](https://kind.sigs.k8s.io/) (Kubernets in Docker)
-
-### Locally
-
-```bash
-# Automated - runs everything
-make integration-test-kind
-
-# Or use the script directly
-./test/kind-integration-test.sh
-```
+Integration tests are defined in `test/integration_test.go`. Running `make integration-test` executes these tests on the current Kubernetes namespace, assuming the test image with your changes is already available in that namespace. If you don't have access to a Kubernetes namespace, you can run the tests locally using a Kind (Kubernetes in Docker) cluster by running `make integration-test-kind`.
 
 The script will:
 1. Deploy PostgreSQL and mock-splunk in a test pod
