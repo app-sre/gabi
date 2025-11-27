@@ -42,8 +42,10 @@ integration-test-kind: kind-setup
 integration-test-clean:
 	@echo "Cleaning up integration test resources..."
 	@oc delete job/gabi-integration-test-job --ignore-not-found=true
-	@oc delete pod/test-pod --ignore-not-found=true
-	@oc delete service/test-pod --ignore-not-found=true
+	@oc delete pod/postgres-test-pod --ignore-not-found=true
+	@oc delete pod/mock-splunk-test-pod --ignore-not-found=true
+	@oc delete service/postgres-service --ignore-not-found=true
+	@oc delete service/mock-splunk-service --ignore-not-found=true
 	@oc delete configmap/wiremock-mappings --ignore-not-found=true
 	@echo "✅ Cleanup complete!"
 
