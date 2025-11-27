@@ -2,18 +2,31 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: test-pod
+  name: postgres-service
   labels:
-    app: test-pod
+    app: postgres-test-pod
     env: pipeline-test
 spec:
   selector:
-    app: test-pod
+    app: postgres-test-pod
   ports:
   - name: postgres
     protocol: TCP
     port: 5432
     targetPort: 5432
+  clusterIP: None  # Headless service for direct pod access
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mock-splunk-service
+  labels:
+    app: mock-splunk-test-pod
+    env: pipeline-test
+spec:
+  selector:
+    app: mock-splunk-test-pod
+  ports:
   - name: wiremock
     protocol: TCP
     port: 8080
@@ -23,14 +36,14 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: test-pod
+  name: mock-splunk-test-pod
   labels:
-    app: test-pod
+    app: mock-splunk-test-pod
     env: pipeline-test
 spec:
   restartPolicy: Never
   containers:
-  - name: mock-splunk
+  - name: wiremock
     image: quay.io/redhat-services-prod/app-sre-tenant/container-images-master/wiremock-master:latest
     imagePullPolicy: IfNotPresent
     ports:
@@ -65,6 +78,21 @@ spec:
     - name: wiremock-mappings
       mountPath: /deployments/mappings
       readOnly: true
+  volumes:
+  - name: wiremock-mappings
+    configMap:
+      name: wiremock-mappings
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: postgres-test-pod
+  labels:
+    app: postgres-test-pod
+    env: pipeline-test
+spec:
+  restartPolicy: Never
+  containers:
   - name: database
     image: registry.redhat.io/rhel9/postgresql-16:9.6
     imagePullPolicy: IfNotPresent
@@ -99,7 +127,3 @@ spec:
       periodSeconds: 10
       timeoutSeconds: 2
       failureThreshold: 3
-  volumes:
-  - name: wiremock-mappings
-    configMap:
-      name: wiremock-mappings
