@@ -4,13 +4,8 @@
 package test
 
 import (
-	"bytes"
-	"context"
 	"crypto/tls"
-	"database/sql"
 	"encoding/json"
-	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"os"
@@ -19,10 +14,6 @@ import (
 	"time"
 
 	"github.com/app-sre/gabi/pkg/env/user"
-	"github.com/orlangure/gnomock"
-	"github.com/orlangure/gnomock/preset/postgres"
-	"github.com/orlangure/gnomock/preset/splunk"
-	"github.com/stretchr/testify/require"
 )
 
 func dummyHTTPClient() http.Client {
@@ -51,106 +42,12 @@ func createConfigurationFile(t *testing.T, expiration time.Time, users []string)
 	return file.Name()
 }
 
-func createSplunkIngestToken(t *testing.T, client http.Client, host, port, password string) string {
-	splunkURL := fmt.Sprintf("https://%s:%s/servicesNS/admin/splunk_httpinput/data/inputs/http?output_mode=json", host, port)
-
-	req, err := http.NewRequest(http.MethodPost, splunkURL, bytes.NewBufferString(`name=mytokexna`))
-	if err != nil {
-		t.Fatal(err)
-	}
-	req.SetBasicAuth("admin", password)
-
-	resp, err := client.Do(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer resp.Body.Close()
-
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	response := struct {
-		Entry []struct {
-			Content struct {
-				Token string `json:"token"`
-			} `json:"content"`
-		} `json:"entry"`
-	}{}
-
-	err = json.Unmarshal(respBody, &response)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return response.Entry[0].Content.Token
-}
-
-func startPostgres(t *testing.T) *gnomock.Container {
-	p := postgres.Preset(
-		postgres.WithUser("gnomock", "gnomick"),
-		postgres.WithDatabase("mydb"),
-	)
-
-	healthcheck := func(ctx context.Context, c *gnomock.Container) error {
-		connStr := fmt.Sprintf("host=%s port=%d user=gnomock password=gnomick dbname=mydb sslmode=disable",
-			c.Host, c.DefaultPort())
-		db, err := sql.Open("pgx", connStr)
-		if err != nil {
-			return err
-		}
-		defer db.Close()
-		return db.PingContext(ctx)
-	}
-
-	options := []gnomock.Option{
-		gnomock.WithUseLocalImagesFirst(),
-		gnomock.WithEnv("POSTGRESQL_USER=gnomock"),
-		gnomock.WithEnv("POSTGRESQL_PASSWORD=gnomick"),
-		gnomock.WithEnv("POSTGRESQL_DATABASE=mydb"),
-		gnomock.WithHealthCheck(healthcheck),
-	}
-
-	psql, err := gnomock.StartCustom("registry.redhat.io/rhel9/postgresql-16:9.6", p.Ports(),
-		options...,
-	)
-	require.NoError(t, err)
-
-	t.Cleanup(func() { _ = gnomock.Stop(psql) })
-
-	return psql
-}
-
-func startSplunk(t *testing.T, password string) *gnomock.Container {
-	s := splunk.Preset(
-		splunk.WithVersion("latest"),
-		splunk.WithLicense(true),
-		splunk.WithPassword(password),
-	)
-
-	options := s.Options()
-	options = append(options,
-		gnomock.WithUseLocalImagesFirst(),
-		gnomock.WithEnv("SPLUNK_GENERAL_TERMS=--accept-sgt-current-at-splunk-com"),
-	)
-
-	splunk, err := gnomock.StartCustom("quay.io/app-sre/splunk:latest", s.Ports(),
-		options...,
-	)
-	require.NoError(t, err)
-
-	t.Cleanup(func() { _ = gnomock.Stop(splunk) })
-
-	return splunk
-}
-
 func setEnvironment(configFile, dbHost, dbPort, dbWrite, splunkToken, splunkEndpoint string) {
 	os.Setenv("DB_DRIVER", "pgx")
 	os.Setenv("DB_HOST", dbHost)
 	os.Setenv("DB_PORT", dbPort)
-	os.Setenv("DB_USER", "gnomock")
-	os.Setenv("DB_PASS", "gnomick")
+	os.Setenv("DB_USER", "gabi")
+	os.Setenv("DB_PASS", "passwd")
 	os.Setenv("DB_NAME", "mydb")
 	os.Setenv("DB_WRITE", dbWrite)
 
