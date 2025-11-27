@@ -36,24 +36,37 @@ oc create configmap wiremock-mappings --from-file=test/wiremock/mappings
 echo ""
 echo "Step 2 Deploying database and mock-splunk..."
 cd "$(dirname "$0")/.."
-oc apply -f test/test-pod.yml
+oc apply -f test/test-pods.yml
 
 # Step 3: Wait for supporting services to be ready
 echo ""
 echo "Step 3: Waiting for services to be ready..."
-echo "Waiting for test-pod to be ready..."
+echo "Waiting for postgres-test-pod and mock-splunk-test-pod to be ready..."
 echo ""
 
-# Show progress while waiting
+# Show progress while waiting for both pods
 (
-  while oc get pod/test-pod -o json 2>/dev/null | jq -e '.status.conditions[] | select(.type=="Ready" and .status=="False")' > /dev/null 2>&1; do
-    # Show container status
-    echo -n "$(date '+%H:%M:%S') - Pod status: "
-    oc get pod/test-pod -o jsonpath='{.status.phase}' 2>/dev/null || echo "Unknown"
+  while true; do
+    POSTGRES_READY=$(oc get pod/postgres-test-pod -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || echo "Unknown")
+    SPLUNK_READY=$(oc get pod/mock-splunk-test-pod -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || echo "Unknown")
 
-    # Show readiness status for each container
-    echo -n "  Containers ready: "
-    oc get pod/test-pod -o jsonpath='{range .status.containerStatuses[*]}{.name}={.ready} {end}' 2>/dev/null || echo "checking..."
+    if [ "$POSTGRES_READY" = "True" ] && [ "$SPLUNK_READY" = "True" ]; then
+      break
+    fi
+
+    # Show container status
+    echo "$(date '+%H:%M:%S') - Pod statuses:"
+    echo -n "  postgres-test-pod: "
+    oc get pod/postgres-test-pod -o jsonpath='{.status.phase}' 2>/dev/null || echo "Unknown"
+    echo -n " (ready: $POSTGRES_READY) - Containers: "
+    oc get pod/postgres-test-pod -o jsonpath='{range .status.containerStatuses[*]}{.name}={.ready} {end}' 2>/dev/null || echo "checking..."
+    echo ""
+
+    echo -n "  mock-splunk-test-pod: "
+    oc get pod/mock-splunk-test-pod -o jsonpath='{.status.phase}' 2>/dev/null || echo "Unknown"
+    echo -n " (ready: $SPLUNK_READY) - Containers: "
+    oc get pod/mock-splunk-test-pod -o jsonpath='{range .status.containerStatuses[*]}{.name}={.ready} {end}' 2>/dev/null || echo "checking..."
+    echo ""
     echo ""
 
     sleep 10
@@ -61,32 +74,58 @@ echo ""
 ) &
 PROGRESS_PID=$!
 
-# Wait for pod to be ready (increased timeout for Splunk)
-if oc wait --for=condition=ready pod/test-pod --timeout=60s; then
-    kill $PROGRESS_PID 2>/dev/null || true
-    wait $PROGRESS_PID 2>/dev/null || true
+# Wait for both pods to be ready (increased timeout for Splunk)
+POSTGRES_READY=false
+SPLUNK_READY=false
+
+if oc wait --for=condition=ready pod/postgres-test-pod --timeout=60s 2>/dev/null; then
+    POSTGRES_READY=true
+fi
+
+if oc wait --for=condition=ready pod/mock-splunk-test-pod --timeout=60s 2>/dev/null; then
+    SPLUNK_READY=true
+fi
+
+kill $PROGRESS_PID 2>/dev/null || true
+wait $PROGRESS_PID 2>/dev/null || true
+
+if [ "$POSTGRES_READY" = "true" ] && [ "$SPLUNK_READY" = "true" ]; then
     echo ""
-    echo "✅ Services are ready!"
-    oc get pod/test-pod
-    oc get service/test-pod
+    echo "✅ All services are ready!"
+    oc get pod/postgres-test-pod
+    oc get pod/mock-splunk-test-pod
+    oc get service/postgres-service
+    oc get service/mock-splunk-service
 else
-    kill $PROGRESS_PID 2>/dev/null || true
-    wait $PROGRESS_PID 2>/dev/null || true
     echo ""
-    echo "❌ Error: Pod failed to become ready within 60 seconds"
+    echo "❌ Error: One or more pods failed to become ready within 60 seconds"
     echo ""
-    echo "Pod description:"
-    oc describe pod/test-pod
-    echo ""
-    echo "Container logs:"
-    oc logs test-pod --all-containers=true || true
+
+    if [ "$POSTGRES_READY" = "false" ]; then
+        echo "postgres-test-pod description:"
+        oc describe pod/postgres-test-pod
+        echo ""
+        echo "postgres-test-pod logs:"
+        oc logs postgres-test-pod --all-containers=true || true
+        echo ""
+    fi
+
+    if [ "$SPLUNK_READY" = "false" ]; then
+        echo "mock-splunk-test-pod description:"
+        oc describe pod/mock-splunk-test-pod
+        echo ""
+        echo "mock-splunk-test-pod logs:"
+        oc logs mock-splunk-test-pod --all-containers=true || true
+    fi
+
     exit 1
 fi
 
 # Verify service endpoints are available
 echo ""
 echo "Verifying service endpoints..."
-oc get endpoints test-pod
+oc get endpoints postgres-service
+oc get endpoints mock-splunk-service
 
 # Step 4: Create test job
 echo ""

@@ -51,7 +51,7 @@ WORKDIR /test
 
 # Default environment variables for integration tests
 ENV DB_DRIVER=pgx
-ENV DB_HOST=test-pod
+ENV DB_HOST=postgres-service
 ENV DB_PORT=5432
 ENV DB_USER=gabi
 ENV DB_PASS=passwd
@@ -59,10 +59,10 @@ ENV DB_NAME=mydb
 ENV DB_WRITE=false
 ENV SPLUNK_INDEX=main
 ENV SPLUNK_TOKEN=test
-ENV SPLUNK_ENDPOINT=http://test-pod:8080
+ENV SPLUNK_ENDPOINT=http://mock-splunk-service:8080
 ENV HOST=test
 ENV NAMESPACE=test
-ENV POD_NAME=test-pod
+ENV POD_NAME=gabi-integration-test-runner
 
 USER 1001
 

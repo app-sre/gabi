@@ -17,11 +17,11 @@ spec:
         image: {{FULL_IMAGE_NAME}}
         imagePullPolicy: IfNotPresent
         env:
-        # Database configuration (pointing to test-pod)
+        # Database configuration (pointing to postgres-test-pod)
         - name: DB_DRIVER
           value: "pgx"
         - name: DB_HOST
-          value: "test-pod"
+          value: "postgres-service"
         - name: DB_PORT
           value: "5432"
         - name: DB_USER
@@ -32,10 +32,10 @@ spec:
           value: "mydb"
         - name: DB_WRITE
           value: "false"
-        # Splunk configuration (pointing to test-pod)
+        # Splunk configuration (pointing to mock-splunk-test-pod)
         # Note: SPLUNK_TOKEN is created dynamically by tests
         - name: SPLUNK_HOST
-          value: "test-pod"
+          value: "mock-splunk-service"
         - name: SPLUNK_INDEX
           value: "main"
         # Other configuration
