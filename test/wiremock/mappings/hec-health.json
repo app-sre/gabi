@@ -1,0 +1,16 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/services/collector/health/1.0"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "text": "HEC is healthy",
+      "status": "green"
+    }
+  }
+}

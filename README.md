@@ -205,3 +205,25 @@ DB_PASS=secret123
 DB_NAME=main
 DB_WRITE=false
 ```
+
+## Integration tests
+
+Integration tests are defined in `test/integration_test.go`. Running `make integration-test` executes these tests on the current Kubernetes namespace, assuming the test image with your changes is already available in that namespace. If you don't have access to a Kubernetes namespace, you can run the tests locally using a Kind (Kubernetes in Docker) cluster by running `make integration-test-kind`.
+
+The script will:
+1. Deploy PostgreSQL and mock-splunk in a test pod
+2. Run your integration tests against those services
+3. Report results
+
+Alternatively, if you have PostgreSQL and Splunk running locally:
+
+```bash
+# Set up environment (optional if using defaults)
+export DB_HOST=localhost
+export DB_PORT=5432
+export SPLUNK_ENDPOINT=http://localhost:8080
+export SPLUNK_TOKEN=your-token-here
+
+# Run tests
+go test -v -tags integration ./test
+```
