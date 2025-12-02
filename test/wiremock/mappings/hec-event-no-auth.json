@@ -1,0 +1,21 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/services/collector/event",
+    "headers": {
+      "Authorization": {
+        "absent": true
+      }
+    }
+  },
+  "response": {
+    "status": 401,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "text": "Token is required",
+      "code": 2
+    }
+  }
+}
