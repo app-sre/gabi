@@ -71,7 +71,7 @@ objects:
           volumeMounts:
           - mountPath: /etc/tls/private
             name: gabi-tls
-        - image: quay.io/app-sre/gabi:${IMAGE_TAG}
+        - image: ${IMAGE}:${IMAGE_TAG}
           name: ${GABI_INSTANCE}
           readinessProbe:
             httpGet:
@@ -216,6 +216,8 @@ parameters:
   value: development
 - name: NAMESPACE
   value: gabi
+- name: IMAGE
+  value: quay.io/app-sre/gabi
 - name: IMAGE_TAG
   value: latest
 - name: REPLICAS
