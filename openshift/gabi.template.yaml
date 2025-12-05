@@ -217,7 +217,7 @@ parameters:
 - name: NAMESPACE
   value: gabi
 - name: IMAGE
-  value: quay.io/app-sre/gabi
+  value: quay.io/redhat-user-workloads/app-sre-tenant/gabi-main/gabi-main
 - name: IMAGE_TAG
   value: latest
 - name: REPLICAS
