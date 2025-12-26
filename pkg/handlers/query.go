@@ -101,17 +101,49 @@ func Query(cfg *gabi.Config) http.HandlerFunc {
 		vals := make([]interface{}, len(cols))
 
 		var (
-			result [][]string
 			keys   []string
 		)
+
+		// Note that it's useful to make sure each error message is unique
+		// to determine which line it came from...
+		w.Header().Set("Cache-Control", "private, no-store")
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		/*
+		 * We don't use the QueryResponse object because that would require
+		 * us to read the entire record set into memory and then write it
+		 * out as one big chunk; this causes timeouts and OOMs on large
+		 * queries.  So we try to write this one record at a time.  The
+		 * Golang JSON encoder puts a newline after each record.
+		*/
+		// Write the result object and start the JSON array.
+		_, err = w.Write([]byte("{\"result\":["))
+		if err != nil {
+			cfg.Logger.Errorf("Unable to write JSON array start: %s", err)
+			_ = queryErrorResponse(w, err)
+			return
+		}
+		// One JSON encoder for the entire operation
+		encoder := json.NewEncoder(w)
 
 		for i := range cols {
 			vals[i] = new(sql.RawBytes)
 			keys = append(keys, cols[i])
 		}
-		result = append(result, keys)
+		err = encoder.Encode(keys)
+		if err != nil {
+			cfg.Logger.Errorf("Unable to encode JSON header row: %s", err)
+			_ = queryErrorResponse(w, err)
+			return
+		}
 
 		for rows.Next() {
+			// Write comma separating rows (from header and each-other)
+			_, err = w.Write([]byte(","))
+			if err != nil {
+				cfg.Logger.Errorf("Unable to write JSON row separator: %s", err)
+				_ = queryErrorResponse(w, err)
+				return
+			}
 			err = rows.Scan(vals...)
 			// Now you can check each element of vals for nil-ness,
 			// and you can use type introspection and type assertions
@@ -139,7 +171,14 @@ func Query(cfg *gabi.Config) http.HandlerFunc {
 				}
 				row = append(row, s)
 			}
-			result = append(result, row)
+
+			// Write the row
+			err = encoder.Encode(row)
+			if err != nil {
+				cfg.Logger.Errorf("Unable to encode JSON data row: %s", err)
+				_ = queryErrorResponse(w, err)
+				return
+			}
 		}
 
 		err = rows.Err()
@@ -149,18 +188,21 @@ func Query(cfg *gabi.Config) http.HandlerFunc {
 			return
 		}
 
-		err = tx.Commit()
+		// End of array and QueryResponse object
+		_, err = w.Write([]byte("],\"error\":\"\"}\n"))
 		if err != nil {
-			cfg.Logger.Errorf("Unable to commit database changes: %s", err)
+			cfg.Logger.Errorf("Unable to write JSON array close: %s", err)
 			_ = queryErrorResponse(w, err)
 			return
 		}
 
-		w.Header().Set("Cache-Control", "private, no-store")
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		_ = json.NewEncoder(w).Encode(&models.QueryResponse{
-			Result: result,
-		})
+		err = tx.Commit()
+		if err != nil {
+			cfg.Logger.Errorf("Unable to commit database changes: %s", err)
+
+			_ = queryErrorResponse(w, err)
+			return
+		}
 	}
 }
 
