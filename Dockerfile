@@ -16,7 +16,7 @@ COPY . ./
 RUN set -eux && \
   go build -ldflags '-s -w' -o gabi cmd/gabi/main.go
 
-FROM registry.access.redhat.com/ubi9/ubi-minimal:9.5-1742914212@sha256:ac61c96b93894b9169221e87718733354dd3765dd4a62b275893c7ff0d876869
+FROM registry.access.redhat.com/ubi9/ubi-minimal:9.7-1764794109@sha256:6fc28bcb6776e387d7a35a2056d9d2b985dc4e26031e98a2bd35a7137cd6fd71
 
 COPY LICENSE /licenses/LICENSE
 
