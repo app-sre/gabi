@@ -9,6 +9,8 @@ objects:
     name: ${GABI_INSTANCE}
     annotations:
       serviceaccounts.openshift.io/oauth-redirectreference.gabi: '{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"${GABI_INSTANCE}"}}'
+  imagePullSecrets:
+  - name: ${IMAGE_PULL_SECRET}
 - apiVersion: apps/v1
   kind: Deployment
   metadata:
@@ -225,9 +227,9 @@ parameters:
 - name: RESOURCES
   value: '{"requests": {"memory": "128Mi", "cpu": "100m"}, "limits":{"memory": "256Mi"}}'
 - name: OAUTH_PROXY_IMAGE_NAME
-  value: quay.io/openshift/origin-oauth-proxy
+  value: registry.redhat.io/openshift4/ose-oauth-proxy-rhel9
 - name: OAUTH_PROXY_IMAGE_TAG
-  value: "4.14.0"
+  value: "v4.18.0-202506230505.p0.gcbd44ad.assembly.stream.el9"
 - name: OAUTH_PROXY_UPSTREAM_TIMEOUT
   value: "300s"
 - name: OAUTH_PROXY_RESOURCES
@@ -256,3 +258,5 @@ parameters:
   value: gabi-instance
 - name: ROUTE_ANNOTATIONS
   value: '{"haproxy.router.openshift.io/timeout": "600s"}'
+- name: IMAGE_PULL_SECRET
+  value: ""
