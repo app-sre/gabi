@@ -3,7 +3,7 @@ module github.com/app-sre/gabi
 go 1.25
 
 require (
-	github.com/DATA-DOG/go-sqlmock v1.5.0
+	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/etherlabsio/healthcheck/v2 v2.0.0
 	github.com/go-sql-driver/mysql v1.7.0
 	github.com/gorilla/handlers v1.5.1
