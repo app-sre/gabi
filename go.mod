@@ -5,7 +5,7 @@ go 1.25
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/etherlabsio/healthcheck/v2 v2.0.0
-	github.com/go-sql-driver/mysql v1.7.0
+	github.com/go-sql-driver/mysql v1.9.3
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
 	github.com/jackc/pgx/v4 v4.18.3
@@ -15,6 +15,7 @@ require (
 )
 
 require (
+	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/felixge/httpsnoop v1.0.3 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
