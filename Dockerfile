@@ -1,6 +1,7 @@
 FROM registry.access.redhat.com/ubi9/go-toolset:1.25.7-1771417345@sha256:799cc027d5ad58cdc156b65286eb6389993ec14c496cf748c09834b7251e78dc AS builder
 ENV GOGC=off
 ENV CGO_ENABLED=0
+ENV GOPROXY=https://proxy.golang.org,direct
 
 WORKDIR /build
 RUN git config --global --add safe.directory /build
