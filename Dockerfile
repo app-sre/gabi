@@ -1,7 +1,7 @@
-FROM registry.access.redhat.com/ubi9/go-toolset:1.25.3-1768393489@sha256:a532ce56e98300a4594b25f8df35016d55de69e4df00062b8e04b3840511e494 AS builder
-
+FROM registry.access.redhat.com/ubi9/go-toolset:1.25.7-1771417345@sha256:799cc027d5ad58cdc156b65286eb6389993ec14c496cf748c09834b7251e78dc AS builder
 ENV GOGC=off
 ENV CGO_ENABLED=0
+ENV GOPROXY=https://proxy.golang.org,direct
 
 WORKDIR /build
 RUN git config --global --add safe.directory /build
@@ -16,7 +16,7 @@ COPY . ./
 RUN set -eux && \
   go build -ldflags '-s -w' -o gabi cmd/gabi/main.go
 
-FROM registry.access.redhat.com/ubi9/ubi-minimal:9.5-1742914212@sha256:ac61c96b93894b9169221e87718733354dd3765dd4a62b275893c7ff0d876869
+FROM registry.access.redhat.com/ubi9/ubi-minimal:9.7-1771346502@sha256:2bd144364d2cb06b08953ce5764cdbf236bbcd63cea214583c4ed011b4685453
 
 COPY LICENSE /licenses/LICENSE
 
