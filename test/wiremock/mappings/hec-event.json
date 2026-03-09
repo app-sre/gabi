@@ -1,0 +1,21 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/services/collector/event",
+    "headers": {
+      "Authorization": {
+        "matches": "^Splunk .+"
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "text": "Success",
+      "code": 0
+    }
+  }
+}
