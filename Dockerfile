@@ -9,7 +9,8 @@ RUN git config --global --add safe.directory /build
 COPY go.mod go.sum ./
 
 RUN set -eux && \
-  go mod download
+  go mod download && \
+  go mod download github.com/creack/pty
 
 COPY . ./
 
