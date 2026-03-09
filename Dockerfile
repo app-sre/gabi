@@ -9,14 +9,15 @@ RUN git config --global --add safe.directory /build
 COPY go.mod go.sum ./
 
 RUN set -eux && \
-  go mod download
+  go mod download && \
+  go mod tidy
 
 COPY . ./
 
 RUN set -eux && \
   go build -ldflags '-s -w' -o gabi cmd/gabi/main.go
 
-FROM registry.access.redhat.com/ubi9/ubi-minimal:9.7-1771346502@sha256:2bd144364d2cb06b08953ce5764cdbf236bbcd63cea214583c4ed011b4685453
+FROM registry.access.redhat.com/ubi9/ubi-minimal:9.7@sha256:c7d44146f826037f6873d99da479299b889473492d3c1ab8af86f08af04ec8a0
 
 COPY LICENSE /licenses/LICENSE
 
