@@ -14,7 +14,7 @@ import (
 	"github.com/app-sre/gabi/internal/test"
 	"github.com/app-sre/gabi/pkg/cmd"
 	"github.com/app-sre/gabi/pkg/env/user"
-	_ "github.com/jackc/pgx/v4/stdlib"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
