@@ -1,0 +1,21 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/services/collector/event",
+    "headers": {
+      "Authorization": {
+        "doesNotMatch": "^Splunk .+"
+      }
+    }
+  },
+  "response": {
+    "status": 401,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "text": "Invalid authorization",
+      "code": 3
+    }
+  }
+}
