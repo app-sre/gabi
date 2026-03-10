@@ -518,7 +518,7 @@ func TestQueryWithSplunkWrite(t *testing.T) {
 	}
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
-	assert.Contains(t, string(body), `{"result":[["?column?"],["1"]],"error":""}`)
+	assert.Contains(t, string(body), "{\"result\":[[\"?column?\"]\n,[\"1\"]\n],\"error\":\"\"}")
 }
 
 func TestQueryWithSplunkWriteFailure(t *testing.T) {
@@ -628,7 +628,8 @@ func TestQueryWithDatabaseWriteAccess(t *testing.T) {
 
 	assert.Contains(t, output.String(), `write access: true`)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
-	assert.Contains(t, string(body), `[null]`)
+	assert.Contains(t, string(body), "\"result\":[null")
+	assert.Contains(t, string(body), "\"error\":\"\"")
 }
 
 func TestQueryWithDatabaseWriteAccessFailure(t *testing.T) {
@@ -745,7 +746,7 @@ func TestQueryWithBase64EncodedQuery(t *testing.T) {
 
 	assert.Contains(t, output.String(), `"Query": "select 1;"`)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
-	assert.Contains(t, string(body), `{"result":[["?column?"],["1"]],"error":""}`)
+	assert.Contains(t, string(body), "{\"result\":[[\"?column?\"]\n,[\"1\"]\n],\"error\":\"\"}")
 }
 
 func TestQueryWithBase64EncodedResults(t *testing.T) {
@@ -806,5 +807,5 @@ func TestQueryWithBase64EncodedResults(t *testing.T) {
 
 	assert.Contains(t, output.String(), `"Query": "select current_schema();"`)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
-	assert.Contains(t, string(body), `{"result":[["current_schema"],["cHVibGlj"]],"error":""}`)
+	assert.Contains(t, string(body), "{\"result\":[[\"current_schema\"]\n,[\"cHVibGlj\"]\n],\"error\":\"\"}")
 }
