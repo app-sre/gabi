@@ -3,7 +3,6 @@ package cmd
 import (
 	"database/sql"
 	"encoding/base64"
-	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -27,9 +26,6 @@ import (
 )
 
 func Run(logger *zap.SugaredLogger) error {
-	enableStream := flag.Bool("enable-stream", false, "Register POST /streamquery to stream JSON result rows (reduces peak memory for large results)")
-	flag.Parse()
-
 	logger.Infof("Starting GABI version: %s", version.Version())
 
 	usere := user.NewUserEnv()
@@ -92,15 +88,12 @@ func Run(logger *zap.SugaredLogger) error {
 		alice.Constructor(middleware.Timeout(timeout)),
 	)
 	queryHandler := queryChain.Then(handlers.Query(cfg))
+	streamHandler := queryChain.Then(handlers.StreamQuery(cfg))
 
 	r := mux.NewRouter()
 	r.Handle("/healthcheck", logHandler(healthLogOutput, handlers.Healthcheck(cfg))).Methods("GET")
 	r.Handle("/query", logHandler(defaultLogOutput, queryHandler)).Methods("POST")
-	if *enableStream {
-		streamHandler := queryChain.Then(handlers.StreamQuery(cfg))
-		r.Handle("/streamquery", logHandler(defaultLogOutput, streamHandler)).Methods("POST")
-		logger.Infof("Streaming query endpoint enabled at POST /streamquery")
-	}
+	r.Handle("/streamquery", logHandler(defaultLogOutput, streamHandler)).Methods("POST")
 	r.Handle("/dbname", logHandler(defaultLogOutput, handlers.GetCurrentDBName(cfg))).Methods("GET")
 	r.Handle("/dbname/switch", logHandler(defaultLogOutput, handlers.SwitchDBName(cfg))).Methods("POST")
 

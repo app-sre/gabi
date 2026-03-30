@@ -188,7 +188,7 @@ func encodeStreamJSONArrayElement(v interface{}) ([]byte, error) {
 
 // StreamQuery streams result rows as JSON array elements to reduce peak memory for large results.
 // The wire format is a single JSON object: {"result":[ <newline-separated encoded rows> ],"error":""}
-// It is only registered when the process is started with --enable-stream.
+// It is served at POST /streamquery (same middleware chain as POST /query).
 func StreamQuery(cfg *gabi.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		base64Mode, tx, rows, cols, ok := beginQuery(cfg, w, r)
