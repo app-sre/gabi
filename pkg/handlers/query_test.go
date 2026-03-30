@@ -518,3 +518,223 @@ func TestQuery(t *testing.T) {
 		})
 	}
 }
+
+func TestStreamQuery(t *testing.T) {
+	t.Parallel()
+
+	streamSuccess := "{\"result\":[[\"?column?\"]\n,[\"1\"]\n],\"error\":\"\"}\n"
+
+	cases := []struct {
+		description string
+		database    func() (*sql.DB, sqlmock.Sqlmock)
+		mock        func(sqlmock.Sqlmock)
+		context     func() context.Context
+		parameters  func(*http.Request)
+		request     func() *bytes.Buffer
+		code        int
+		body        string
+		bodyNot     string
+		wantLog     string
+	}{
+		{
+			"streams valid query rows",
+			func() (*sql.DB, sqlmock.Sqlmock) {
+				db, mock, _ := sqlmock.New()
+				return db, mock
+			},
+			func(mock sqlmock.Sqlmock) {
+				rows := sqlmock.NewRows([]string{"?column?"}).AddRow("1")
+				mock.ExpectBegin()
+				mock.ExpectQuery(`select 1;`).WillReturnRows(rows)
+				mock.ExpectCommit()
+			},
+			func() context.Context { return context.TODO() },
+			func(*http.Request) {},
+			func() *bytes.Buffer {
+				return bytes.NewBufferString(`{"query": "select 1;"}`)
+			},
+			http.StatusOK,
+			streamSuccess,
+			``,
+			``,
+		},
+		{
+			"uses SQL from context like /query",
+			func() (*sql.DB, sqlmock.Sqlmock) {
+				db, mock, _ := sqlmock.New()
+				return db, mock
+			},
+			func(mock sqlmock.Sqlmock) {
+				rows := sqlmock.NewRows([]string{"?column?"}).AddRow("2")
+				mock.ExpectBegin()
+				mock.ExpectQuery(`select 2;`).WillReturnRows(rows)
+				mock.ExpectCommit()
+			},
+			func() context.Context {
+				return context.WithValue(context.TODO(), middleware.ContextKeyQuery, "select 2;")
+			},
+			func(*http.Request) {},
+			func() *bytes.Buffer {
+				return bytes.NewBufferString(`{"query": "select 1;"}`)
+			},
+			http.StatusOK,
+			"{\"result\":[[\"?column?\"]\n,[\"2\"]\n],\"error\":\"\"}\n",
+			``,
+			``,
+		},
+		{
+			"streams with base64-encoded results",
+			func() (*sql.DB, sqlmock.Sqlmock) {
+				db, mock, _ := sqlmock.New()
+				return db, mock
+			},
+			func(mock sqlmock.Sqlmock) {
+				rows := sqlmock.NewRows([]string{"?column?"}).AddRow("1")
+				mock.ExpectBegin()
+				mock.ExpectQuery(`select 1;`).WillReturnRows(rows)
+				mock.ExpectCommit()
+			},
+			func() context.Context { return context.TODO() },
+			func(r *http.Request) {
+				q := r.URL.Query()
+				q.Add("base64_results", "true")
+				r.URL.RawQuery = q.Encode()
+			},
+			func() *bytes.Buffer {
+				return bytes.NewBufferString(`{"query": "select 1;"}`)
+			},
+			http.StatusOK,
+			"{\"result\":[[\"?column?\"]\n,[\"MQ==\"]\n],\"error\":\"\"}\n",
+			``,
+			``,
+		},
+		{
+			"empty result set streams null header row",
+			func() (*sql.DB, sqlmock.Sqlmock) {
+				db, mock, _ := sqlmock.New()
+				return db, mock
+			},
+			func(mock sqlmock.Sqlmock) {
+				rows := sqlmock.NewRows([]string{})
+				mock.ExpectBegin()
+				mock.ExpectQuery(``).WillReturnRows(rows)
+				mock.ExpectCommit()
+			},
+			func() context.Context { return context.TODO() },
+			func(*http.Request) {},
+			func() *bytes.Buffer {
+				return bytes.NewBufferString(`{"query": ""}`)
+			},
+			http.StatusOK,
+			"{\"result\":[null\n],\"error\":\"\"}\n",
+			``,
+			``,
+		},
+		{
+			"database query error before body returns JSON error like /query",
+			func() (*sql.DB, sqlmock.Sqlmock) {
+				db, mock, _ := sqlmock.New()
+				return db, mock
+			},
+			func(mock sqlmock.Sqlmock) {
+				mock.ExpectBegin()
+				mock.ExpectQuery(`select 1;`).WillReturnError(errors.New("stream query exec failed"))
+				mock.ExpectRollback()
+			},
+			func() context.Context { return context.TODO() },
+			func(*http.Request) {},
+			func() *bytes.Buffer {
+				return bytes.NewBufferString(`{"query":"select 1;"}`)
+			},
+			http.StatusBadRequest,
+			`{"result":null,"error":"stream query exec failed"}` + "\n",
+			``,
+			``,
+		},
+		{
+			"commit failure after streaming rows leaves body without closing trailer",
+			func() (*sql.DB, sqlmock.Sqlmock) {
+				db, mock, _ := sqlmock.New()
+				return db, mock
+			},
+			func(mock sqlmock.Sqlmock) {
+				rows := sqlmock.NewRows([]string{"?column?"}).AddRow("1")
+				mock.ExpectBegin()
+				mock.ExpectQuery(`select 1;`).WillReturnRows(rows)
+				mock.ExpectCommit().WillReturnError(errors.New("stream commit failed"))
+			},
+			func() context.Context { return context.TODO() },
+			func(*http.Request) {},
+			func() *bytes.Buffer {
+				return bytes.NewBufferString(`{"query": "select 1;"}`)
+			},
+			http.StatusOK,
+			"{\"result\":[[\"?column?\"]\n,[\"1\"]\n",
+			`],"error":""}`,
+			`Unable to commit database changes`,
+		},
+		{
+			"row iteration error after stream started logs and does not append JSON error object",
+			func() (*sql.DB, sqlmock.Sqlmock) {
+				db, mock, _ := sqlmock.New()
+				return db, mock
+			},
+			func(mock sqlmock.Sqlmock) {
+				rows := sqlmock.NewRows([]string{"?column?"})
+				rows.AddRow("1")
+				rows.AddRow("2").RowError(1, errors.New("stream row error"))
+				mock.ExpectBegin()
+				mock.ExpectQuery(`select \* from test;`).WillReturnRows(rows)
+				mock.ExpectRollback()
+			},
+			func() context.Context { return context.TODO() },
+			func(*http.Request) {},
+			func() *bytes.Buffer {
+				return bytes.NewBufferString(`{"query": "select * from test;"}`)
+			},
+			http.StatusOK,
+			"{\"result\":[[\"?column?\"]\n,[\"1\"]\n",
+			`"error":"stream row error"`,
+			`Unable to process database rows: stream row error`,
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.description, func(t *testing.T) {
+			t.Parallel()
+
+			var body, output bytes.Buffer
+
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest(http.MethodGet, "/", tc.request())
+
+			logger := test.DummyLogger(&output).Sugar()
+			encoder := base64.StdEncoding
+
+			db, mock := tc.database()
+			defer func() { _ = db.Close() }()
+
+			tc.mock(mock)
+			tc.parameters(r)
+
+			expected := &gabi.Config{DB: db, DBEnv: &gabidb.Env{}, Logger: logger, Encoder: encoder}
+			StreamQuery(expected).ServeHTTP(w, r.WithContext(tc.context()))
+
+			actual := w.Result()
+			defer func() { _ = actual.Body.Close() }()
+
+			_, _ = io.Copy(&body, actual.Body)
+
+			require.NoError(t, mock.ExpectationsWereMet())
+			assert.Equal(t, tc.code, actual.StatusCode)
+			assert.Equal(t, tc.body, body.String())
+			if tc.bodyNot != "" {
+				assert.NotContains(t, body.String(), tc.bodyNot)
+			}
+			if tc.wantLog != "" {
+				assert.Contains(t, output.String(), tc.wantLog)
+			}
+		})
+	}
+}
