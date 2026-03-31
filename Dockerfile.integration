@@ -1,5 +1,5 @@
 # Build the gabi application and integration tests
-FROM registry.access.redhat.com/ubi9/go-toolset:9.7-1769430014@sha256:dc1f887fd22e4cc112f59b3173754ef97f1c6b7202a720e697b2798d8053b7be AS builder
+FROM registry.access.redhat.com/ubi9/go-toolset:9.7-1774618347@sha256:a05a1c82b3ce23864a831084ff21a907128f4707ca3f455ba99717c0c2c4d6c1 AS builder
 
 ENV GOGC=off
 ENV CGO_ENABLED=0
@@ -26,7 +26,7 @@ RUN set -eux && \
   go test -c -tags integration -o integration.test ./test
 
 # Final image
-FROM registry.access.redhat.com/ubi9/ubi-minimal:9.5-1742914212@sha256:ac61c96b93894b9169221e87718733354dd3765dd4a62b275893c7ff0d876869
+FROM registry.access.redhat.com/ubi9/ubi-minimal:9.7-1773939694@sha256:83006d535923fcf1345067873524a3980316f51794f01d8655be55d6e9387183
 
 COPY LICENSE /licenses/LICENSE
 
