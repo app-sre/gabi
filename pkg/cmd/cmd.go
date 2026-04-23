@@ -88,10 +88,12 @@ func Run(logger *zap.SugaredLogger) error {
 		alice.Constructor(middleware.Timeout(timeout)),
 	)
 	queryHandler := queryChain.Then(handlers.Query(cfg))
+	streamHandler := queryChain.Then(handlers.StreamQuery(cfg))
 
 	r := mux.NewRouter()
 	r.Handle("/healthcheck", logHandler(healthLogOutput, handlers.Healthcheck(cfg))).Methods("GET")
 	r.Handle("/query", logHandler(defaultLogOutput, queryHandler)).Methods("POST")
+	r.Handle("/streamquery", logHandler(defaultLogOutput, streamHandler)).Methods("POST")
 	r.Handle("/dbname", logHandler(defaultLogOutput, handlers.GetCurrentDBName(cfg))).Methods("GET")
 	r.Handle("/dbname/switch", logHandler(defaultLogOutput, handlers.SwitchDBName(cfg))).Methods("POST")
 

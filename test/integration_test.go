@@ -521,6 +521,61 @@ func TestQueryWithSplunkWrite(t *testing.T) {
 	assert.Contains(t, string(body), `{"result":[["?column?"],["1"]],"error":""}`)
 }
 
+func TestStreamQueryWithSplunkWrite(t *testing.T) {
+	client := dummyHTTPClient()
+
+	dbHost := getEnvOrDefault("DB_HOST", "localhost")
+	dbPort := getEnvOrDefault("DB_PORT", "5432")
+	splunkEndpoint := getEnvOrDefault("SPLUNK_ENDPOINT", "http://localhost:8080")
+	splunkToken := getEnvOrDefault("SPLUNK_TOKEN", "test123")
+
+	configFile := createConfigurationFile(t, time.Now().AddDate(0, 0, 1), []string{"test"})
+	defer os.Remove(configFile)
+
+	setEnvironment(
+		configFile,
+		dbHost,
+		dbPort,
+		"false",
+		splunkToken,
+		splunkEndpoint,
+	)
+	defer os.Clearenv()
+
+	logger := test.DummyLogger(io.Discard)
+	defer logger.Sync()
+
+	go func() {
+		err := cmd.Run(logger.Sugar())
+		require.NoError(t, err)
+	}()
+	waitForPortOpen(8080)
+
+	req, err := http.NewRequest("POST", "http://localhost:8080/streamquery", bytes.NewBuffer([]byte(`{"query":"select 1;"}`)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("X-Forwarded-User", "test")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	bodyStr := string(body)
+	assert.Contains(t, bodyStr, `"?column?"`)
+	assert.Contains(t, bodyStr, `"1"`)
+	assert.Contains(t, bodyStr, `"error":""`)
+	assert.Contains(t, bodyStr, `"result":[`)
+}
+
 func TestQueryWithSplunkWriteFailure(t *testing.T) {
 	client := dummyHTTPClient()
 
