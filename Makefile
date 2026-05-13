@@ -1,8 +1,10 @@
-.PHONY: build linux clean test helm integration-test integration-test-kind integration-test-image integration-test-binary kind-setup integration-test-clean kind-clean
+.PHONY: build linux clean test bench bench-save bench-compare profile helm integration-test integration-test-kind integration-test-image integration-test-binary kind-setup integration-test-clean kind-clean
 
 CONTAINER_ENGINE ?= $(shell which podman >/dev/null 2>&1 && echo podman || echo docker)
 CLUSTER_NAME ?= gabi-integration
 IMAGE_NAME ?= gabi-integration-test:local
+BENCH_FILE ?= bench-$(shell git rev-parse --short HEAD 2>/dev/null || echo unknown).txt
+BENCH_COUNT ?= 6
 
 all: build
 
@@ -17,6 +19,26 @@ clean:
 
 test:
 	go test ./...
+
+# Run handler benchmarks (prints to stdout).
+bench:
+	go test ./pkg/handlers/ -bench='Benchmark(Query|StreamQuery)LargeResult' -benchmem -count=$(BENCH_COUNT) -run='^$$'
+
+# Save benchmark output to a named file for later comparison.
+# Usage: make bench-save                      (auto-names by git SHA)
+#        make bench-save BENCH_FILE=before.txt
+bench-save:
+	go test ./pkg/handlers/ -bench='Benchmark(Query|StreamQuery)LargeResult' -benchmem -count=$(BENCH_COUNT) -run='^$$' | tee $(BENCH_FILE)
+
+# Compare two benchmark files with benchstat.
+# Usage: make bench-compare OLD=before.txt NEW=after.txt
+bench-compare:
+	@command -v benchstat >/dev/null 2>&1 || { echo "Install benchstat: go install golang.org/x/perf/cmd/benchstat@latest"; exit 1; }
+	benchstat $(OLD) $(NEW)
+
+# Profile GABI process RSS during /query vs /streamquery (requires running PostgreSQL).
+profile:
+	./scripts/profile-memory.sh
 
 # Build the integration test binary locally
 integration-test-binary:

@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"bytes"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -176,19 +175,20 @@ func Query(cfg *gabi.Config) http.HandlerFunc {
 	}
 }
 
-// encodeStreamJSONArrayElement encodes one JSON value the same way json.Encoder does on an
-// http.ResponseWriter (including a trailing newline).
-func encodeStreamJSONArrayElement(v interface{}) ([]byte, error) {
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(v); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
-}
+// streamFlushInterval controls how many rows are written between Flush calls.
+// Flushing too often adds syscall overhead; too rarely delays data to the client.
+const streamFlushInterval = 256
 
-// StreamQuery streams result rows as JSON array elements to reduce peak memory for large results.
-// The wire format is a single JSON object: {"result":[ <newline-separated encoded rows> ],"error":""}
-// It is served at POST /streamquery (same middleware chain as POST /query).
+// StreamQuery streams result rows as JSON array elements to reduce peak memory
+// for large results. Each row is JSON-encoded directly to the ResponseWriter
+// (no intermediate buffer) so that memory stays roughly O(row-width) instead of
+// O(total-result).
+//
+// Wire format: {"result":[ <newline-separated encoded rows> ],"error":""}
+//
+// IMPORTANT: this handler must NOT be wrapped with http.TimeoutHandler, which
+// buffers all writes and defeats streaming. Use middleware.ContextTimeout instead
+// so the context deadline is still enforced by the DB driver.
 func StreamQuery(cfg *gabi.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		base64Mode, tx, rows, cols, ok := beginQuery(cfg, w, r)
@@ -198,11 +198,12 @@ func StreamQuery(cfg *gabi.Config) http.HandlerFunc {
 		defer func() { _ = rows.Close() }()
 		defer func() { _ = tx.Rollback() }()
 
-		vals := make([]interface{}, len(cols))
-		var keys []string
+		ncols := len(cols)
+		vals := make([]interface{}, ncols)
+		keys := make([]string, ncols)
 		for i := range cols {
 			vals[i] = new(sql.RawBytes)
-			keys = append(keys, cols[i])
+			keys[i] = cols[i]
 		}
 
 		bodyStarted := false
@@ -216,73 +217,69 @@ func StreamQuery(cfg *gabi.Config) http.HandlerFunc {
 		w.Header().Set("Cache-Control", "private, no-store")
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
-		headerRow, err := encodeStreamJSONArrayElement(keys)
-		if err != nil {
-			writeStreamFatal("Unable to encode JSON header row", err)
-			return
-		}
-
-		if _, err = w.Write([]byte("{\"result\":[")); err != nil {
+		if _, err := w.Write([]byte("{\"result\":[")); err != nil {
 			writeStreamFatal("Unable to write JSON array start", err)
 			return
 		}
 		bodyStarted = true
 
-		if _, err = w.Write(headerRow); err != nil {
+		enc := json.NewEncoder(w)
+		if err := enc.Encode(keys); err != nil {
 			cfg.Logger.Errorf("Unable to write JSON header row: %s", err)
 			return
 		}
 
+		flusher, canFlush := w.(http.Flusher)
+		row := make([]string, ncols)
+		rowNum := 0
+
 		for rows.Next() {
-			err = rows.Scan(vals...)
-			if err != nil {
+			if err := rows.Scan(vals...); err != nil {
 				cfg.Logger.Errorf("Unable to process database rows: %s", err)
 				return
 			}
 
-			var row []string
-			for _, value := range vals {
-				content, typed := reflect.ValueOf(value).Interface().(*sql.RawBytes)
-				if !typed {
-					err = fmt.Errorf("unable to convert value type %T to *sql.RawBytes", value)
-					cfg.Logger.Errorf("Unable to process database query: %s", err)
-					return
-				}
-				s := string(*content)
+			for i := range vals {
+				content := vals[i].(*sql.RawBytes)
 				if base64Mode&base64EncodeResults != 0 {
-					s = cfg.Encoder.EncodeToString(*content)
+					row[i] = cfg.Encoder.EncodeToString(*content)
+				} else {
+					row[i] = string(*content)
 				}
-				row = append(row, s)
 			}
 
-			rowBytes, err := encodeStreamJSONArrayElement(row)
-			if err != nil {
-				cfg.Logger.Errorf("Unable to encode JSON data row: %s", err)
-				return
-			}
-			if _, err = w.Write([]byte(",")); err != nil {
+			if _, err := w.Write([]byte(",")); err != nil {
 				cfg.Logger.Errorf("Unable to write JSON row separator: %s", err)
 				return
 			}
-			if _, err = w.Write(rowBytes); err != nil {
+			if err := enc.Encode(row); err != nil {
 				cfg.Logger.Errorf("Unable to write JSON data row: %s", err)
 				return
 			}
+
+			rowNum++
+			if canFlush && rowNum%streamFlushInterval == 0 {
+				flusher.Flush()
+			}
 		}
 
-		if err = rows.Err(); err != nil {
+		if err := rows.Err(); err != nil {
 			cfg.Logger.Errorf("Unable to process database rows: %s", err)
 			return
 		}
 
-		if err = tx.Commit(); err != nil {
+		if err := tx.Commit(); err != nil {
 			cfg.Logger.Errorf("Unable to commit database changes: %s", err)
 			return
 		}
 
-		if _, err = w.Write([]byte("],\"error\":\"\"}\n")); err != nil {
+		if _, err := w.Write([]byte("],\"error\":\"\"}\n")); err != nil {
 			cfg.Logger.Errorf("Unable to write JSON array close: %s", err)
 			return
+		}
+
+		if canFlush {
+			flusher.Flush()
 		}
 	}
 }

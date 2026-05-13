@@ -609,7 +609,7 @@ func TestStreamQuery(t *testing.T) {
 			``,
 		},
 		{
-			"empty result set streams null header row",
+			"empty result set streams empty header row",
 			func() (*sql.DB, sqlmock.Sqlmock) {
 				db, mock, _ := sqlmock.New()
 				return db, mock
@@ -626,7 +626,7 @@ func TestStreamQuery(t *testing.T) {
 				return bytes.NewBufferString(`{"query": ""}`)
 			},
 			http.StatusOK,
-			"{\"result\":[null\n],\"error\":\"\"}\n",
+			"{\"result\":[[]\n],\"error\":\"\"}\n",
 			``,
 			``,
 		},

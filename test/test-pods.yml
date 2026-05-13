@@ -94,14 +94,15 @@ spec:
   restartPolicy: Never
   containers:
   - name: database
-    image: registry.redhat.io/rhel9/postgresql-16:9.6
+    # Public image for local Kind (no registry.redhat.io login). Matches gabi DB_* env in tests.
+    image: postgres:16-alpine
     imagePullPolicy: IfNotPresent
     env:
-    - name: POSTGRESQL_USER
+    - name: POSTGRES_USER
       value: gabi
-    - name: POSTGRESQL_PASSWORD
+    - name: POSTGRES_PASSWORD
       value: passwd
-    - name: POSTGRESQL_DATABASE
+    - name: POSTGRES_DB
       value: mydb
     ports:
     - containerPort: 5432
