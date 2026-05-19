@@ -27,8 +27,20 @@ echo ""
 
 # Check prerequisites
 if ! command -v kind &> /dev/null; then
-    echo "Error: kind is not installed. Please install kind first."
-    echo "Visit: https://kind.sigs.k8s.io/docs/user/quick-start/#installation"
+    echo "Error: kind is not installed (required for make integration-test-kind)."
+    echo ""
+    echo "Install it using one of:"
+    echo "  1) Go toolchain (works on any OS with Go):"
+    echo "       go install sigs.k8s.io/kind@latest"
+    echo "     Then put Go's bin dir on PATH, e.g.:"
+    echo "       export PATH=\"\$(go env GOPATH)/bin:\$PATH\""
+    echo ""
+    echo "  2) Fedora / RHEL (if the package exists in your repos):"
+    echo "       sudo dnf install kind"
+    echo ""
+    echo "  3) Upstream docs: https://kind.sigs.k8s.io/docs/user/quick-start/#installation"
+    echo ""
+    echo "If you use asdf, add a kind plugin and pin a version in .tool-versions."
     exit 1
 fi
 

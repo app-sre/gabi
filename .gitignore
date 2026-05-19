@@ -20,3 +20,7 @@ __debug_*
 test/user*
 
 gabi
+
+# Benchmark artifacts
+gabi-bench-report*.md
+bench-*.txt

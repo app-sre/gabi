@@ -27,6 +27,23 @@ if ! command -v oc &> /dev/null; then
     exit 1
 fi
 
+current_ctx="$(oc config current-context 2>/dev/null || echo "(none)")"
+api_server="$(oc config view --minify -o jsonpath='{.clusters[0].cluster.server}' 2>/dev/null || echo "(unknown)")"
+echo "Kubernetes/OpenShift context: ${current_ctx}"
+echo "API server: ${api_server}"
+echo ""
+
+if ! oc get --raw /version --request-timeout=20s >/dev/null 2>&1; then
+    echo "Error: cannot reach the cluster API (timed out, connection refused, or TLS/auth failure)."
+    echo ""
+    echo "  Remote cluster: ensure VPN is up, firewall allows ${api_server}, and credentials are valid."
+    echo "  Local tests: use a local Kind cluster instead — from the repo root run:"
+    echo "      make integration-test-kind"
+    echo ""
+    echo "  To point oc at another cluster: oc login ...  or  kubectl config use-context <name>"
+    exit 1
+fi
+
 # Step 1: Create wiremock mappings ConfigMap
 echo ""
 echo "Step 1: Creating wiremock mappings ConfigMap..."

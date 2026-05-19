@@ -157,6 +157,97 @@ eyJ0aXRsZSI6ICJEZWVwIFdvcms6IFJ1bGVzIGZvciBGb2N1c2VkIFN1Y2Nlc3MgaW4gYSBEaXN0cmFj
 Note: almost every modern and well-behaved JSON parser would attempt to unescape quotes and handle reserved characters
 correctly.
 
+### Streaming Queries
+
+For queries that return large result sets, GABI provides a streaming endpoint at `POST /streamquery`.
+The standard `/query` endpoint buffers the entire result in memory before responding, which can
+cause out-of-memory errors or timeouts for queries that return hundreds of thousands of rows.
+The `/streamquery` endpoint sends each row to the client as it is received from the database,
+keeping server memory usage constant regardless of result size.
+
+#### When to use `/streamquery`
+
+| Scenario | Recommended endpoint |
+|----------|---------------------|
+| Small results (< 10k rows) | Either — both behave identically |
+| Large results (10k+ rows) | `/streamquery` — avoids OOM |
+| Automated pipelines that check HTTP status for errors | `/query` — guarantees 4xx on failure |
+| Long-running analytics or exports | `/streamquery` — faster time-to-first-byte |
+
+#### Usage
+
+The request format is identical to `/query`:
+
+```
+$ curl -s 'http://localhost:8080/streamquery' -X POST \
+  -H 'X-Forwarded-User: test' \
+  -d '{"query":"select table_name from information_schema.tables where table_schema='\''public'\''"}' | jq
+{
+  "result": [
+    [
+      "table_name"
+    ],
+    [
+      "persons"
+    ]
+  ],
+  "error": ""
+}
+```
+
+All query parameters supported by `/query` work with `/streamquery`, including `base64_query=true`
+and `base64_results=true`.
+
+#### Response format
+
+The response body is the same JSON structure as `/query`:
+
+```json
+{"result":[["column_a","column_b"],["val1","val2"],["val3","val4"]],"error":""}
+```
+
+The first element of `result` is always the column header row. Subsequent elements are data rows.
+On success, `error` is an empty string.
+
+#### Error handling differences
+
+Because `/streamquery` begins writing the HTTP response before all rows have been processed, error
+behaviour differs from `/query` once streaming has started:
+
+| | `/query` | `/streamquery` |
+|-|----------|---------------|
+| Error before results | HTTP 400 + `{"result":null,"error":"..."}` | HTTP 400 + `{"result":null,"error":"..."}` |
+| Error during streaming | HTTP 400 + `{"result":null,"error":"..."}` | HTTP 200 + `{"result":[...partial...],"error":"<message>"}` |
+| Timeout | HTTP 200 + `"Request timed out"` (plain text) | HTTP 200 + `{"result":[...partial...],"error":"<message>"}` |
+
+**Clients consuming `/streamquery` must check the `error` field in the JSON body**, not the HTTP
+status code, to detect failures. An empty `error` string indicates success:
+
+```python
+resp = requests.post(url, json={"query": sql}, headers=headers)
+data = resp.json()
+if data["error"]:
+    raise RuntimeError(f"Query failed: {data['error']}")
+rows = data["result"]
+```
+
+```go
+var qr models.QueryResponse
+if err := json.NewDecoder(resp.Body).Decode(&qr); err != nil {
+    // handle decode error
+}
+if qr.Error != "" {
+    // handle query error
+}
+```
+
+#### Migration guide
+
+Switching from `/query` to `/streamquery` requires **one change**: update the URL path from
+`/query` to `/streamquery`. The request body, headers, query parameters, and response schema are
+all identical. The only adaptation needed is error detection — check the `error` field in the
+response body rather than relying on HTTP status codes.
+
 The database name can also be switched via HTTP requests. To change the database name dynamically, send a POST request to /dbname/switch with the new database name in the request body.
 
 ```
