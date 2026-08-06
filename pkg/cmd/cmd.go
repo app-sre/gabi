@@ -108,7 +108,7 @@ func Run(logger *zap.SugaredLogger) error {
 	logger.Infof("HTTP server starting on port: %d", port)
 
 	server := &http.Server{
-		Addr:        net.JoinHostPort("", strconv.Itoa(port)),
+		Addr:        net.JoinHostPort("127.0.0.1", strconv.Itoa(port)),
 		Handler:     r,
 		ReadTimeout: gabi.DefaultReadTimeout,
 	}

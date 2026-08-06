@@ -32,10 +32,11 @@ objects:
               - --silent
               - --show-error
               - --fail
-              - http://$(HOST):8080/healthcheck
+              - --insecure
+              - https://$(HOST):3000/healthcheck
             env:
             - name: HOST
-              value: ${GABI_INSTANCE}-internal.${NAMESPACE}.svc.cluster.local
+              value: ${GABI_INSTANCE}.${NAMESPACE}.svc.cluster.local
             resources: "${{RESOURCES}}"
 parameters:
 - name: NAMESPACE
