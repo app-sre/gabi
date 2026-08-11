@@ -21,6 +21,15 @@ const (
 
 	// The total time it takes to execute the request.
 	DefaultRequestTimeout = 2 * time.Minute
+
+	// MaxRequestBodyBytes caps JSON request bodies buffered by middleware and
+	// handlers (SQL query payloads, db-switch requests). Sized for legitimate
+	// break-glass SQL while preventing memory-exhaustion DoS against the
+	// typically single-replica pod (FIND-005).
+	MaxRequestBodyBytes = 1 << 20 // 1 MiB
+
+	// MaxHeaderBytes limits request header size on the HTTP server.
+	MaxHeaderBytes = 1 << 20 // 1 MiB
 )
 
 type Config struct {
@@ -71,20 +80,24 @@ func parseDuration(duration string) (time.Duration, error) {
 }
 
 func (c *Config) OverrideDBName(dbName string) error {
+	if err := db.ValidateDBName(dbName); err != nil {
+		return err
+	}
+
 	c.Lock()
 	defer c.Unlock()
-	db, err := SQLOpen(c.DBEnv.Driver.String(), c.DBEnv.ConnectionDSN(dbName))
+	dbConn, err := SQLOpen(c.DBEnv.Driver.String(), c.DBEnv.ConnectionDSN(dbName))
 	if err != nil {
 		return err
 	}
-	err = db.Ping()
+	err = dbConn.Ping()
 	if err != nil {
-		db.Close()
+		_ = dbConn.Close()
 		return err
 	}
 	c.Logger.Debugf("Connected to database host: %s (dbname: %s)", c.DBEnv.Host, dbName)
-	c.DB.Close()
-	c.DB = db
+	_ = c.DB.Close()
+	c.DB = dbConn
 	c.DBEnv.Name = dbName
 	return nil
 }

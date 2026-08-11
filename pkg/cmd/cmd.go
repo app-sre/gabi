@@ -94,23 +94,40 @@ func Run(logger *zap.SugaredLogger) error {
 		alice.Constructor(middleware.Audit(cfg)),
 		alice.Constructor(middleware.ContextTimeout(timeout)),
 	)
+	// /dbname and /dbname/switch must enforce the same identity and expiry
+	// gates as /query. GET /dbname has no body, so it omits Audit; switch
+	// emits its own fail-closed Splunk event inside the handler (FIND-002).
+	dbnameChain := alice.New(
+		alice.Constructor(middleware.Recovery(cfg)),
+		alice.Constructor(middleware.Authorization(cfg)),
+		alice.Constructor(middleware.Expiration(cfg)),
+	)
+	switchChain := alice.New(
+		alice.Constructor(middleware.Recovery(cfg)),
+		alice.Constructor(middleware.Authorization(cfg)),
+		alice.Constructor(middleware.Expiration(cfg)),
+		alice.Constructor(middleware.Timeout(timeout)),
+	)
 	queryHandler := queryChain.Then(handlers.Query(cfg))
 	streamHandler := streamChain.Then(handlers.StreamQuery(cfg))
+	dbnameHandler := dbnameChain.Then(handlers.GetCurrentDBName(cfg))
+	switchHandler := switchChain.Then(handlers.SwitchDBName(cfg))
 
 	r := mux.NewRouter()
 	r.Handle("/healthcheck", logHandler(healthLogOutput, handlers.Healthcheck(cfg))).Methods("GET")
 	r.Handle("/query", logHandler(defaultLogOutput, queryHandler)).Methods("POST")
 	r.Handle("/streamquery", logHandler(defaultLogOutput, streamHandler)).Methods("POST")
-	r.Handle("/dbname", logHandler(defaultLogOutput, handlers.GetCurrentDBName(cfg))).Methods("GET")
-	r.Handle("/dbname/switch", logHandler(defaultLogOutput, handlers.SwitchDBName(cfg))).Methods("POST")
+	r.Handle("/dbname", logHandler(defaultLogOutput, dbnameHandler)).Methods("GET")
+	r.Handle("/dbname/switch", logHandler(defaultLogOutput, switchHandler)).Methods("POST")
 
 	port := 8080
 	logger.Infof("HTTP server starting on port: %d", port)
 
 	server := &http.Server{
-		Addr:        net.JoinHostPort("127.0.0.1", strconv.Itoa(port)),
-		Handler:     r,
-		ReadTimeout: gabi.DefaultReadTimeout,
+		Addr:           net.JoinHostPort("127.0.0.1", strconv.Itoa(port)),
+		Handler:        r,
+		ReadTimeout:    gabi.DefaultReadTimeout,
+		MaxHeaderBytes: gabi.MaxHeaderBytes,
 	}
 	if err := server.ListenAndServe(); err != nil {
 		return fmt.Errorf("unable to start HTTP server: %w", err)

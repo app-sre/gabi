@@ -66,6 +66,9 @@ func (d *Env) Populate() error {
 	if name == "" {
 		return &env.Error{Name: "DB_NAME"}
 	}
+	if err := ValidateDBName(name); err != nil {
+		return fmt.Errorf("DB_NAME: %w", err)
+	}
 	d.Name = name
 
 	d.AllowWrite = false
@@ -78,18 +81,31 @@ func (d *Env) Populate() error {
 		d.AllowWrite = write
 	}
 
-	// Only do this for PostgreSQL driver as the MySQL driver will handle encoding.
-	if d.Driver == driverPostgreSQL {
+	// Escape for PostgreSQL URL userinfo. Compare via driver() so aliases
+	// ("postgres", "postgresql") are handled the same as "pgx".
+	if d.Driver.driver() == driverPostgreSQL {
 		d.Password = url.PathEscape(d.Password)
 	}
 
 	return nil
 }
 
+// ConnectionDSN builds a driver DSN. When dbName is non-empty it replaces
+// Env.Name. Callers accepting untrusted input MUST ValidateDBName first.
+// PostgreSQL database names are PathEscape'd so metacharacters cannot
+// introduce URL query parameters even if validation is skipped.
 func (d *Env) ConnectionDSN(dbName string) string {
+	name := d.Name
 	if dbName != "" {
-		return fmt.Sprintf(d.Driver.Format(), d.Username, d.Password, d.Host, d.Port, dbName)
-	} else {
-		return fmt.Sprintf(d.Driver.Format(), d.Username, d.Password, d.Host, d.Port, d.Name)
+		name = dbName
+	}
+
+	switch d.Driver.driver() {
+	case driverPostgreSQL:
+		return fmt.Sprintf(driverPostgreSQLFormat, d.Username, d.Password, d.Host, d.Port, url.PathEscape(name))
+	case driverMySQL:
+		return fmt.Sprintf(driverMySQLFormat, d.Username, d.Password, d.Host, d.Port, name)
+	default:
+		return fmt.Sprintf(d.Driver.Format(), d.Username, d.Password, d.Host, d.Port, name)
 	}
 }
