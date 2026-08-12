@@ -70,6 +70,6 @@ func SwitchDBName(cfg *gabi.Config) http.Handler {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		_ = json.NewEncoder(w).Encode(map[string]string{"db_name": cfg.GetCurrentDBName()})
+		_ = json.NewEncoder(w).Encode(models.DBNameResponse{DBName: cfg.GetCurrentDBName()})
 	})
 }

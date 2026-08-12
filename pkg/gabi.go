@@ -80,6 +80,8 @@ func parseDuration(duration string) (time.Duration, error) {
 }
 
 func (c *Config) OverrideDBName(dbName string) error {
+	// Defence-in-depth: callers (e.g. SwitchDBName handler) may have already
+	// validated, but this method is public so we guard unconditionally.
 	if err := db.ValidateDBName(dbName); err != nil {
 		return err
 	}
