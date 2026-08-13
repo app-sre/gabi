@@ -446,6 +446,37 @@ func TestAudit(t *testing.T) {
 			``,
 		},
 		{
+			"reject oversized request body",
+			func(s *httptest.Server) *splunk.Env {
+				return &splunk.Env{
+					Endpoint: s.URL,
+				}
+			},
+			func() context.Context {
+				return context.TODO()
+			},
+			func(b *bytes.Buffer) func(r *http.Request) {
+				return func(r *http.Request) {
+					r.Header.Set("Content-Length", fmt.Sprint(b.Len()))
+					r.Header.Set("X-Forwarded-User", "test")
+				}
+			},
+			func() *bytes.Buffer {
+				// Just over MaxRequestBodyBytes (1 MiB).
+				return bytes.NewBuffer(bytes.Repeat([]byte("a"), int(gabi.MaxRequestBodyBytes)+1))
+			},
+			func(b *bytes.Buffer) func(w http.ResponseWriter, r *http.Request) {
+				return func(w http.ResponseWriter, r *http.Request) {
+					// Must not run.
+				}
+			},
+			http.StatusRequestEntityTooLarge,
+			`Request body too large`,
+			``,
+			regexp.MustCompile(``),
+			``,
+		},
+		{
 			"invalid query with malformed Base64-encoded value in the body",
 			func(s *httptest.Server) *splunk.Env {
 				return &splunk.Env{
