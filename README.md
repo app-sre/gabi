@@ -321,3 +321,78 @@ export SPLUNK_TOKEN=your-token-here
 # Run tests
 go test -v -tags integration ./test
 ```
+
+## Local Dev/Test Setup
+
+Use this workflow to exercise the integration test suite locally before opening a
+pull request. It creates a disposable Kind cluster named `gabi-integration`,
+builds an image from the current checkout, and runs the tests through `oc`.
+It is intended for a local development machine; do not run the commands against
+a shared Kubernetes or OpenShift context without deliberately choosing an
+appropriate test namespace.
+
+### Prerequisites
+
+- `kind`, `oc`, and either Podman or Docker must be available on `PATH`.
+- Authenticate the chosen container runtime to `registry.redhat.io`. Use a Red
+  Hat Registry Service Account token downloaded as `.dockerconfigjson`; browser
+  SSO grants access to the portal but is not a container-registry password.
+  For Podman, log in with the service account credentials before running the
+  suite:
+
+  ```bash
+  cd /home/tcarvalh/workspace/commercial/fork/gabi
+  podman login registry.redhat.io
+  ```
+
+- When using rootless Podman, Kind uses its experimental Podman provider.
+
+### Run the suite with Podman
+
+From the repository root, create the cluster (only needed once) and run the
+suite:
+
+```bash
+cd /home/tcarvalh/workspace/commercial/fork/gabi
+KIND_EXPERIMENTAL_PROVIDER=podman kind create cluster --name gabi-integration --retain
+make integration-test-kind CONTAINER_ENGINE=podman
+```
+
+The Make target builds the GABI integration image, loads its dependent images
+into the cluster, deploys PostgreSQL and mock Splunk, then runs the integration
+test job. A passing job is the expected final result.
+
+### Podman image-load workaround
+
+Some rootless Podman/Kind combinations cannot make `kind load docker-image`
+see the PostgreSQL image even after `podman pull` succeeds. If the setup stops
+with `registry.redhat.io/rhel9/postgresql-16:9.6 not present locally`, the
+GABI image has already been loaded; import PostgreSQL directly into the Kind
+node and run the tests:
+
+```bash
+cd /home/tcarvalh/workspace/commercial/fork/gabi
+podman save registry.redhat.io/rhel9/postgresql-16:9.6 -o /tmp/gabi-postgresql-16.tar
+podman cp /tmp/gabi-postgresql-16.tar gabi-integration-control-plane:/gabi-postgresql-16.tar
+podman exec gabi-integration-control-plane ctr -n k8s.io images import /gabi-postgresql-16.tar
+podman exec gabi-integration-control-plane rm /gabi-postgresql-16.tar
+rm /tmp/gabi-postgresql-16.tar
+IMAGE_URL=localhost/gabi-integration-test:local make integration-test
+```
+
+If a previous interrupted run left the temporary GABI archive behind, remove
+`/tmp/gabi-test-image.tar` before rerunning `make integration-test-kind`.
+
+### Inspect and clean up
+
+The tests operate on the current `oc` context and create fixed resource names.
+Clean them up before rerunning a failed test or switching contexts:
+
+```bash
+cd /home/tcarvalh/workspace/commercial/fork/gabi
+make integration-test-clean
+KIND_EXPERIMENTAL_PROVIDER=podman make kind-clean
+```
+
+To retain the cluster for troubleshooting, omit `make kind-clean` and inspect
+the test resources with `oc get pods,jobs` and `oc logs job/gabi-integration-test-job`.

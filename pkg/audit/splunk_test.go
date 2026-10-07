@@ -352,7 +352,7 @@ func TestSplunkAduitWrite(t *testing.T) {
 				}
 			},
 			true,
-			`unable to write to Splunk`,
+			`Splunk audit failed`,
 			regexp.MustCompile(``),
 		},
 		{
@@ -382,7 +382,7 @@ func TestSplunkAduitWrite(t *testing.T) {
 				}
 			},
 			true,
-			`unable to unmarshal Splunk response`,
+			`Splunk audit failed`,
 			regexp.MustCompile(``),
 		},
 		{
@@ -463,6 +463,86 @@ func TestSplunkAduitWrite(t *testing.T) {
 
 			assert.Equal(t, tc.headers(), &headers)
 			assert.Regexp(t, tc.want, server.String())
+		})
+	}
+}
+
+func TestSplunkAuditWriteResponseFailures(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name          string
+		status        int
+		contentType   string
+		body          string
+		wantMediaType string
+		wantReason    string
+	}{
+		{
+			name:          "403 HTML response",
+			status:        http.StatusForbidden,
+			contentType:   "text/html; charset=utf-8",
+			body:          "<html>WAF response containing sensitive details</html>",
+			wantMediaType: "text/html",
+			wantReason:    "unexpected HTTP status",
+		},
+		{
+			name:          "429 JSON response",
+			status:        http.StatusTooManyRequests,
+			contentType:   "application/json",
+			body:          `{"code":0,"text":"success-shaped response"}`,
+			wantMediaType: "application/json",
+			wantReason:    "unexpected HTTP status",
+		},
+		{
+			name:          "503 JSON response",
+			status:        http.StatusServiceUnavailable,
+			contentType:   "application/json",
+			body:          `{"code":0,"text":"success-shaped response"}`,
+			wantMediaType: "application/json",
+			wantReason:    "unexpected HTTP status",
+		},
+		{
+			name:          "malformed JSON on success status",
+			status:        http.StatusOK,
+			contentType:   "application/json",
+			body:          `{"code":`,
+			wantMediaType: "application/json",
+			wantReason:    "invalid JSON response",
+		},
+		{
+			name:          "HEC JSON error",
+			status:        http.StatusOK,
+			contentType:   "application/json",
+			body:          `{"code":9,"text":"Invalid token"}`,
+			wantMediaType: "application/json",
+			wantReason:    "HEC response code 9",
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", tc.contentType)
+				w.WriteHeader(tc.status)
+				_, _ = io.WriteString(w, tc.body)
+			}))
+			defer server.Close()
+
+			audit := NewSplunkAudit(&splunk.Env{Endpoint: server.URL})
+			err := audit.Write(context.Background(), &QueryData{})
+			require.Error(t, err)
+
+			var responseErr *SplunkResponseError
+			require.ErrorAs(t, err, &responseErr)
+			assert.Equal(t, tc.status, responseErr.StatusCode)
+			assert.Equal(t, server.URL, responseErr.EndpointOrigin)
+			assert.Equal(t, tc.wantMediaType, responseErr.MediaType)
+			assert.Equal(t, tc.wantReason, responseErr.Reason)
+			assert.NotContains(t, err.Error(), tc.body)
 		})
 	}
 }
