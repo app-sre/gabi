@@ -56,7 +56,7 @@ func SwitchDBName(cfg *gabi.Config) http.Handler {
 		}
 		_ = cfg.LoggerAudit.Write(r.Context(), query)
 		if err := cfg.SplunkAudit.Write(r.Context(), query); err != nil {
-			cfg.Logger.Errorf("Unable to send audit to Splunk: %s", err)
+			cfg.Logger.Errorf("Splunk audit failure; contact help-itde-monitoring-logging: %s", err)
 			http.Error(w, "An internal error has occurred", http.StatusInternalServerError)
 			return
 		}

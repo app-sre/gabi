@@ -625,7 +625,7 @@ func TestQueryWithSplunkWriteFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	assert.Contains(t, output.String(), `Unable to send audit to Splunk`)
+	assert.Contains(t, output.String(), `Splunk audit failure; contact help-itde-monitoring-logging`)
 	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 	assert.Contains(t, string(body), `An internal error has occurred`)
 }

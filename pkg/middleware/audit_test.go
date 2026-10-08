@@ -559,3 +559,40 @@ func TestAudit(t *testing.T) {
 		})
 	}
 }
+
+func TestAuditLogsRedactedSplunkFailure(t *testing.T) {
+	var output bytes.Buffer
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusForbidden)
+		_, _ = io.WriteString(w, "<html>WAF private response</html>")
+	}))
+	defer server.Close()
+
+	logger := test.DummyLogger(&output).Sugar()
+	cfg := &gabi.Config{
+		Logger:      logger,
+		LoggerAudit: &audit.ConsoleAudit{Logger: logger},
+		SplunkAudit: audit.NewSplunkAudit(&splunk.Env{Endpoint: server.URL + "/private?token=secret"}),
+		Encoder:     base64.StdEncoding,
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/query", bytes.NewBufferString(`{"query":"select 1"}`))
+	req.Header.Set("Content-Length", fmt.Sprint(req.ContentLength))
+	req.Header.Set("X-Forwarded-User", "test")
+	response := httptest.NewRecorder()
+	handlerCalled := false
+
+	Audit(cfg)(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		handlerCalled = true
+	})).ServeHTTP(response, req)
+
+	assert.False(t, handlerCalled)
+	assert.Equal(t, http.StatusInternalServerError, response.Code)
+	assert.Contains(t, response.Body.String(), "An internal error has occurred")
+	assert.Contains(t, output.String(), "Splunk audit failure; contact help-itde-monitoring-logging")
+	assert.Contains(t, output.String(), "received HTTP 403")
+	assert.Contains(t, output.String(), "text/html")
+	assert.NotContains(t, output.String(), "WAF private response")
+	assert.NotContains(t, output.String(), "token=secret")
+}
