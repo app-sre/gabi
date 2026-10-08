@@ -341,7 +341,7 @@ appropriate test namespace.
   suite:
 
   ```bash
-  cd /home/tcarvalh/workspace/commercial/fork/gabi
+  cd <GABI_REPO>
   podman login registry.redhat.io
   ```
 
@@ -353,7 +353,7 @@ From the repository root, create the cluster (only needed once) and run the
 suite:
 
 ```bash
-cd /home/tcarvalh/workspace/commercial/fork/gabi
+cd <GABI_REPO>
 KIND_EXPERIMENTAL_PROVIDER=podman kind create cluster --name gabi-integration --retain
 make integration-test-kind CONTAINER_ENGINE=podman
 ```
@@ -371,7 +371,7 @@ GABI image has already been loaded; import PostgreSQL directly into the Kind
 node and run the tests:
 
 ```bash
-cd /home/tcarvalh/workspace/commercial/fork/gabi
+cd <GABI_REPO>
 podman save registry.redhat.io/rhel9/postgresql-16:9.6 -o /tmp/gabi-postgresql-16.tar
 podman cp /tmp/gabi-postgresql-16.tar gabi-integration-control-plane:/gabi-postgresql-16.tar
 podman exec gabi-integration-control-plane ctr -n k8s.io images import /gabi-postgresql-16.tar
@@ -389,7 +389,7 @@ The tests operate on the current `oc` context and create fixed resource names.
 Clean them up before rerunning a failed test or switching contexts:
 
 ```bash
-cd /home/tcarvalh/workspace/commercial/fork/gabi
+cd <GABI_REPO>
 make integration-test-clean
 KIND_EXPERIMENTAL_PROVIDER=podman make kind-clean
 ```
