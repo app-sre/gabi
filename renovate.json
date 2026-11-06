@@ -1,4 +1,14 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>app-sre/shared-pipelines//renovate/default.json"]
+  "extends": ["github>app-sre/shared-pipelines//renovate/default.json"],
+  "packageRules": [
+    {
+      "description": "Shared-pipelines pin updates: dedicated PR, automerge after green checks",
+      "matchDepNames": ["https://github.com/app-sre/shared-pipelines"],
+      "pinDigests": true,
+      "groupName": "shared-pipelines-pin",
+      "groupSlug": "shared-pipelines-pin",
+      "automerge": true
+    }
+  ]
 }
