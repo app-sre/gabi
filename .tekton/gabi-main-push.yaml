@@ -32,7 +32,7 @@ spec:
     - name: url
       value: https://github.com/app-sre/shared-pipelines
     - name: revision
-      value: "bb9566324e26a2421f4b9e8883a76db3856415ae"
+      value: "36f89ea1fe15263903fd5f1158b694ca3b516ec3"
     - name: pathInRepo
       value: pipelines/multi-arch-build-pipeline.yaml
     resolver: git
